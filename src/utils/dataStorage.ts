@@ -1,4 +1,3 @@
-
 import { Student, Course, Exam, Grade, ExamType, LetterGrade } from "@/types";
 
 // Local storage keys
@@ -319,10 +318,8 @@ export const importStudentsFromCSV = (csv: string): Student[] => {
 // Import grades from CSV
 interface GradeImportOptions {
   csvData: string;
-  courseId: string;
+  examId: string; // Now using the examId directly
   examType: ExamType;
-  examDate: string;
-  isNewExam: boolean;
   hasHeaderRow: boolean;
 }
 
@@ -332,7 +329,7 @@ interface ImportResult {
 }
 
 export const importGradesFromCSV = (options: GradeImportOptions): ImportResult => {
-  const { csvData, courseId, examType, examDate, isNewExam, hasHeaderRow } = options;
+  const { csvData, examId, hasHeaderRow } = options;
   const rows = csvData.split('\n').filter(row => row.trim());
   
   if (rows.length === 0) {
@@ -342,33 +339,20 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
   // Skip header row if indicated
   const startIndex = hasHeaderRow ? 1 : 0;
   
-  // Find or create an exam
-  let exam: Exam;
+  // Get the exam
+  const exams = getExams();
+  const exam = exams.find(e => e.id === examId);
   
-  if (isNewExam) {
-    // Create new exam
-    exam = addExam({
-      courseId,
-      tipo: examType,
-      data: examDate
-    });
-  } else {
-    // Find existing exam with same type and course
-    const exams = getExams();
-    const existingExam = exams
-      .filter(e => e.courseId === courseId && e.tipo === examType)
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0]; // most recent
-    
-    if (existingExam) {
-      exam = existingExam;
-    } else {
-      // If no existing exam found, create a new one
-      exam = addExam({
-        courseId,
-        tipo: examType,
-        data: examDate
-      });
-    }
+  if (!exam) {
+    throw new Error("Esame non trovato");
+  }
+  
+  // Get the course
+  const courses = getCourses();
+  const course = courses.find(c => c.id === exam.courseId);
+  
+  if (!course) {
+    throw new Error("Corso non trovato");
   }
   
   // Process each row
@@ -383,6 +367,7 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
     try {
       if (columns.length < 2) {
         errors++;
+        console.error(`Riga ${i+1}: formato non valido (numero colonne insufficiente)`);
         continue;
       }
       
@@ -391,15 +376,17 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
       // Check if student exists
       if (!matricoleSet.has(matricola)) {
         errors++;
+        console.error(`Riga ${i+1}: matricola ${matricola} non trovata`);
         continue;
       }
       
-      if (examType === 'intermedio') {
-        // For intermediate exams, expect letter grade
+      if (course.haIntermedio) {
+        // For letter grades
         const votoLettera = columns[1].toUpperCase();
         
         if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(votoLettera)) {
           errors++;
+          console.error(`Riga ${i+1}: voto in lettere non valido (${votoLettera}) per lo studente ${matricola}`);
           continue;
         }
         
@@ -409,11 +396,12 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
           votoLettera: votoLettera as LetterGrade
         });
       } else {
-        // For complete exams, expect numeric grade and optional lode
+        // For numeric grades
         const votoNumerico = parseInt(columns[1]);
         
         if (isNaN(votoNumerico) || votoNumerico < 18 || votoNumerico > 30) {
           errors++;
+          console.error(`Riga ${i+1}: voto numerico non valido (${columns[1]}) per lo studente ${matricola}`);
           continue;
         }
         
@@ -424,6 +412,7 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
         // Only allow lode with 30
         if (conLode && votoNumerico !== 30) {
           errors++;
+          console.error(`Riga ${i+1}: lode non può essere assegnata con voto diverso da 30 per lo studente ${matricola}`);
           continue;
         }
         
@@ -438,6 +427,7 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
       imported++;
     } catch (error) {
       errors++;
+      console.error(`Errore nell'importazione della riga ${i+1}:`, error);
     }
   }
   

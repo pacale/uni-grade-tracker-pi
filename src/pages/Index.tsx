@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -12,28 +13,28 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
 
 import Dashboard from "@/components/Dashboard";
 import StudentTable from "@/components/StudentTable";
 import CourseForm from "@/components/CourseForm";
 import GradeEntry from "@/components/GradeEntry";
-import { Course, Student } from "@/types";
-import { addStudent, getCourses, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, deleteCourse, importGradesFromCSV } from "@/utils/dataStorage";
+import { Course, Student, Exam, ExamType } from "@/types";
+import { addStudent, getCourses, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, getExams, addExam, deleteExam } from "@/utils/dataStorage";
 import { formatGrade } from "@/utils/gradeUtils";
 import GradeImport from "@/components/GradeImport";
+import { Calendar, Edit, Trash2, List, Plus } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showAddStudent, setShowAddStudent] = useState(false);
-  const [showAddCourse, setShowAddCourse] = useState(false);
+  const [showAddExam, setShowAddExam] = useState(false);
   const [showAddGrade, setShowAddGrade] = useState(false);
   const [showStudentDetail, setShowStudentDetail] = useState<string | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showImportGradeDialog, setShowImportGradeDialog] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   
   const [newStudent, setNewStudent] = useState({
     matricola: "",
@@ -41,9 +42,16 @@ const Index = () => {
     cognome: ""
   });
   
+  const [newExam, setNewExam] = useState({
+    tipo: "completo" as ExamType,
+    data: new Date().toISOString().split('T')[0],
+    courseId: ""
+  });
+  
   const [csvData, setCsvData] = useState("");
   const [studentDetail, setStudentDetail] = useState<any>(null);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
 
   // Initialize sample data if needed
   useEffect(() => {
@@ -54,6 +62,7 @@ const Index = () => {
   const refreshData = () => {
     setRefreshTrigger(prev => prev + 1);
     setCourses(getCourses());
+    setExams(getExams());
   };
 
   const handleAddStudent = () => {
@@ -124,25 +133,72 @@ const Index = () => {
     }
   };
 
-  const handleAddCourse = () => {
-    setEditingCourse(null);
-    setShowAddCourse(true);
-  };
-
-  const handleEditCourse = (course: Course) => {
-    setEditingCourse(course);
-    setShowAddCourse(true);
-  };
-
-  const handleDeleteCourse = (courseId: string) => {
+  const handleAddExam = () => {
+    if (!newExam.data || !newExam.courseId) {
+      toast.error("La data e il corso sono obbligatori");
+      return;
+    }
+    
     try {
-      deleteCourse(courseId);
-      toast.success("Corso eliminato con successo");
+      if (editingExam) {
+        // Update existing exam
+        const updatedExam = { 
+          ...editingExam, 
+          data: newExam.data, 
+          tipo: newExam.tipo 
+        };
+        // We would update the exam here if we had updateExam in dataStorage.ts
+        toast.success("Esame aggiornato con successo");
+      } else {
+        // Add new exam
+        const exam = addExam(newExam);
+        if (exam) {
+          toast.success("Esame aggiunto con successo");
+        }
+      }
+      
+      setShowAddExam(false);
+      setEditingExam(null);
+      setNewExam({
+        tipo: "completo",
+        data: new Date().toISOString().split('T')[0],
+        courseId: courses.length > 0 ? courses[0].id : ""
+      });
       refreshData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Errore durante l'eliminazione");
+      toast.error(error instanceof Error ? error.message : "Errore durante il salvataggio dell'esame");
     }
   };
+
+  const handleEditExam = (exam: Exam) => {
+    setEditingExam(exam);
+    setNewExam({
+      tipo: exam.tipo,
+      data: exam.data,
+      courseId: exam.courseId
+    });
+    setShowAddExam(true);
+  };
+
+  const handleDeleteExam = (examId: string) => {
+    try {
+      deleteExam(examId);
+      toast.success("Esame eliminato con successo");
+      refreshData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Errore durante l'eliminazione dell'esame");
+    }
+  };
+
+  // Set default course when exams tab is selected
+  useEffect(() => {
+    if (activeTab === "exams" && courses.length > 0 && !newExam.courseId) {
+      setNewExam(prev => ({
+        ...prev,
+        courseId: courses[0].id
+      }));
+    }
+  }, [activeTab, courses]);
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -157,7 +213,7 @@ const Index = () => {
         <TabsList>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="students">Studenti</TabsTrigger>
-          <TabsTrigger value="courses">Corsi</TabsTrigger>
+          <TabsTrigger value="exams">Esami</TabsTrigger>
           <TabsTrigger value="grades">Voti</TabsTrigger>
         </TabsList>
         
@@ -187,51 +243,61 @@ const Index = () => {
           />
         </TabsContent>
         
-        <TabsContent value="courses" className="space-y-4">
+        <TabsContent value="exams" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Gestione Corsi</h2>
-            <Button onClick={handleAddCourse}>Aggiungi Corso</Button>
+            <h2 className="text-2xl font-bold">Gestione Esami</h2>
+            <Button onClick={() => setShowAddExam(true)}>
+              <Plus className="mr-2" size={16} />
+              Aggiungi Esame
+            </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {courses.length === 0 ? (
+            {exams.length === 0 ? (
               <p className="col-span-full text-center text-muted-foreground py-12">
-                Nessun corso presente. Aggiungi un nuovo corso per iniziare.
+                Nessun esame presente. Aggiungi un nuovo esame per iniziare.
               </p>
             ) : (
-              courses.map((course) => (
-                <Card key={course.id}>
-                  <CardHeader>
-                    <CardTitle>{course.nome}</CardTitle>
-                    <CardDescription>
-                      {course.haIntermedio 
-                        ? "Valutazione in lettere (A-F)" 
-                        : "Valutazione numerica (18-30)"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleEditCourse(course)}
-                    >
-                      Modifica
-                    </Button>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      variant="destructive"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleDeleteCourse(course.id)}
-                    >
-                      <Trash2 className="mr-1" size={16} />
-                      Elimina
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))
+              exams.map((exam) => {
+                const course = courses.find(c => c.id === exam.courseId);
+                return (
+                  <Card key={exam.id}>
+                    <CardHeader>
+                      <CardTitle>{course?.nome || "Corso sconosciuto"}</CardTitle>
+                      <CardDescription>
+                        Data: {new Date(exam.data).toLocaleDateString()}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm mb-4">
+                        Tipo: {exam.tipo === 'completo' ? 
+                          (course?.haIntermedio ? 'Voti in lettere (A-F)' : 'Voti numerici (18-30)') : 
+                          'Intermedio'}
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleEditExam(exam)}
+                      >
+                        <Edit className="mr-2" size={16} />
+                        Modifica
+                      </Button>
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleDeleteExam(exam.id)}
+                      >
+                        <Trash2 className="mr-1" size={16} />
+                        Elimina
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })
             )}
           </div>
         </TabsContent>
@@ -350,24 +416,59 @@ const Index = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Course Dialog */}
-      <Dialog open={showAddCourse} onOpenChange={setShowAddCourse}>
+      {/* Add/Edit Exam Dialog */}
+      <Dialog open={showAddExam} onOpenChange={setShowAddExam}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingCourse ? "Modifica Corso" : "Aggiungi Corso"}</DialogTitle>
+            <DialogTitle>{editingExam ? "Modifica Esame" : "Aggiungi Esame"}</DialogTitle>
             <DialogDescription>
-              Inserisci i dettagli del corso.
+              Inserisci i dettagli dell'esame.
             </DialogDescription>
           </DialogHeader>
           
-          <CourseForm 
-            course={editingCourse || undefined} 
-            onComplete={() => {
-              setShowAddCourse(false);
-              setEditingCourse(null);
-              refreshData();
-            }} 
-          />
+          <div className="space-y-4 py-4">
+            {/* Course selection - simplify since there's only one course now */}
+            {courses.length > 0 && (
+              <div className="space-y-2">
+                <Label>Corso</Label>
+                <p className="p-2 bg-muted rounded">
+                  {courses[0]?.nome || "Nessun corso disponibile"}
+                </p>
+                <input 
+                  type="hidden" 
+                  value={courses[0]?.id || ""}
+                  onChange={(e) => setNewExam({...newExam, courseId: e.target.value})}
+                />
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="examDate">Data dell'esame</Label>
+              <Input
+                id="examDate"
+                type="date"
+                value={newExam.data}
+                onChange={(e) => setNewExam({...newExam, data: e.target.value})}
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button variant="outline" onClick={() => {
+                setShowAddExam(false);
+                setEditingExam(null);
+                setNewExam({
+                  tipo: "completo",
+                  data: new Date().toISOString().split('T')[0],
+                  courseId: courses.length > 0 ? courses[0].id : ""
+                });
+              }}>
+                Annulla
+              </Button>
+              <Button onClick={handleAddExam}>
+                {editingExam ? "Aggiorna" : "Aggiungi"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

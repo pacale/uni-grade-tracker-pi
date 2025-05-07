@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Course, Student, ExamType } from "@/types";
+import { Course, Exam, Student } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getCourses, getStudents, importGradesFromCSV } from "@/utils/dataStorage";
+import { getCourses, getExams, importGradesFromCSV } from "@/utils/dataStorage";
 import {
   Select,
   SelectContent,
@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, FileText } from "lucide-react";
 
@@ -21,37 +20,38 @@ interface GradeImportProps {
 }
 
 const GradeImport = ({ onComplete }: GradeImportProps) => {
+  const [exams, setExams] = useState<Exam[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [csvData, setCsvData] = useState("");
-  const [courseId, setCourseId] = useState("");
-  const [examType, setExamType] = useState<ExamType>("completo");
-  const [examDate, setExamDate] = useState(new Date().toISOString().split("T")[0]);
-  const [isNewExam, setIsNewExam] = useState(true);
+  const [examId, setExamId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [hasHeaderRow, setHasHeaderRow] = useState(true);
 
   useEffect(() => {
-    // Load courses
+    // Load courses and exams
     setCourses(getCourses());
+    setExams(getExams());
   }, []);
   
-  // Update selected course when courseId changes
+  // Update selected exam and course when examId changes
   useEffect(() => {
-    if (courseId) {
-      const course = courses.find(c => c.id === courseId) || null;
-      setSelectedCourse(course);
+    if (examId) {
+      const exam = exams.find(e => e.id === examId) || null;
+      setSelectedExam(exam);
       
-      // Imposta il tipo di esame basato sul tipo di valutazione del corso
-      if (course && course.haIntermedio && examType === 'completo') {
-        setExamType('intermedio');
-      } else if (course && !course.haIntermedio && examType === 'intermedio') {
-        setExamType('completo');
+      if (exam) {
+        const course = courses.find(c => c.id === exam.courseId) || null;
+        setSelectedCourse(course);
+      } else {
+        setSelectedCourse(null);
       }
     } else {
+      setSelectedExam(null);
       setSelectedCourse(null);
     }
-  }, [courseId, courses, examType]);
+  }, [examId, exams, courses]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,33 +59,35 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
     
     try {
       // Validation
-      if (!courseId) {
-        toast.error("Seleziona un corso");
-        return;
-      }
-      
-      if (!examDate) {
-        toast.error("Seleziona una data per l'esame");
+      if (!examId) {
+        toast.error("Seleziona un esame");
+        setIsSubmitting(false);
         return;
       }
       
       if (!csvData.trim()) {
         toast.error("Inserisci i dati CSV");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (!selectedExam) {
+        toast.error("Esame non trovato");
+        setIsSubmitting(false);
         return;
       }
       
       // Import grades
       const result = importGradesFromCSV({
         csvData,
-        courseId,
-        examType,
-        examDate,
-        isNewExam,
+        courseId: selectedExam.courseId,
+        examId: selectedExam.id,
+        examType: selectedExam.tipo,
         hasHeaderRow
       });
       
       if (result.imported === 0) {
-        toast.info("Nessun voto importato. Verifica il formato del file CSV.");
+        toast.info("Nessun voto importato. Verifica il formato del file CSV e assicurati che le matricole esistano.");
       } else {
         toast.success(`Importati ${result.imported} voti con successo`);
         
@@ -105,61 +107,24 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="courseId">Corso</Label>
-            <Select value={courseId} onValueChange={setCourseId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona un corso" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="examType">Tipo di esame</Label>
-            <Select 
-              value={examType} 
-              onValueChange={setExamType as (value: string) => void}
-              disabled={selectedCourse !== null}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona il tipo di esame" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedCourse?.haIntermedio ? (
-                  <SelectItem value="intermedio">Valutazione in lettere</SelectItem>
-                ) : (
-                  <SelectItem value="completo">Valutazione numerica</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
         <div>
-          <Label htmlFor="examDate">Data dell'esame</Label>
-          <Input 
-            id="examDate"
-            type="date" 
-            value={examDate} 
-            onChange={(e) => setExamDate(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="isNewExam"
-            checked={isNewExam}
-            onCheckedChange={(checked) => setIsNewExam(!!checked)}
-          />
-          <Label htmlFor="isNewExam">Crea nuovo esame</Label>
+          <Label htmlFor="examId">Esame</Label>
+          <Select value={examId} onValueChange={setExamId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleziona un esame" />
+            </SelectTrigger>
+            <SelectContent>
+              {exams.map((exam) => {
+                const course = courses.find(c => c.id === exam.courseId);
+                const formattedDate = new Date(exam.data).toLocaleDateString();
+                return (
+                  <SelectItem key={exam.id} value={exam.id}>
+                    {course?.nome || "Corso sconosciuto"} - {formattedDate}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center space-x-2">
