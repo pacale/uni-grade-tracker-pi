@@ -59,23 +59,12 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Studenti</CardTitle>
+            <CardTitle className="text-sm font-medium">Studenti con voti</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics?.counts.students || 0}</div>
+            <div className="text-2xl font-bold">{analytics?.counts.uniqueStudentsWithGrades || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Totale studenti nel sistema
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Corsi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics?.counts.courses || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Corsi attivi nel sistema
+              Studenti che hanno ricevuto almeno un voto
             </p>
           </CardContent>
         </Card>
@@ -87,6 +76,17 @@ const Dashboard = () => {
             <div className="text-2xl font-bold">{analytics?.counts.exams || 0}</div>
             <p className="text-xs text-muted-foreground">
               Sessioni d'esame registrate
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Voti</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.counts.grades || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Totale voti registrati
             </p>
           </CardContent>
         </Card>
@@ -128,7 +128,7 @@ const Dashboard = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Statistiche per corso</CardTitle>
+            <CardTitle>Statistiche per esame</CardTitle>
             <CardDescription>
               Media e percentuale di approvazione
             </CardDescription>
@@ -165,7 +165,7 @@ const Dashboard = () => {
                       {exam.courseName}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {exam.type === 'intermedio' ? 'Prova intermedia' : 'Esame completo'} - {exam.date}
+                      {exam.date}
                     </p>
                   </div>
                   <div className="text-right">
@@ -173,7 +173,7 @@ const Dashboard = () => {
                       Media: {exam.stats.average}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Passati: {exam.stats.passing}/{exam.stats.passing + exam.stats.failing} ({exam.stats.passingPercentage}%)
+                      {exam.grades} voti | Passati: {exam.stats.passing}/{exam.stats.passing + exam.stats.failing} ({exam.stats.passingPercentage}%)
                     </p>
                   </div>
                 </div>

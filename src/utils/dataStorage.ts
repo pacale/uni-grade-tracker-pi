@@ -173,8 +173,8 @@ export const addGrade = (grade: Omit<Grade, "id">): Grade => {
   const newGrade = { ...grade, id: generateId() };
   const grades = getGrades();
   
-  // Validate grade data
-  validateGrade(newGrade);
+  // Validate grade data, but allow grades for non-registered students
+  validateGrade(newGrade, true);
   
   setGrades([...grades, newGrade]);
   return newGrade;
@@ -188,8 +188,8 @@ export const updateGrade = (grade: Grade): Grade => {
     throw new Error("Grade not found");
   }
   
-  // Validate grade data
-  validateGrade(grade);
+  // Validate grade data, but allow grades for non-registered students
+  validateGrade(grade, true);
   
   grades[index] = grade;
   setGrades(grades);
@@ -202,7 +202,7 @@ export const deleteGrade = (id: string): void => {
 };
 
 // Grade validation helper
-const validateGrade = (grade: Grade): void => {
+const validateGrade = (grade: Grade, allowNonRegisteredStudents: boolean = false): void => {
   // Get the exam to check its type
   const exams = getExams();
   const exam = exams.find(e => e.id === grade.examId);
@@ -211,34 +211,44 @@ const validateGrade = (grade: Grade): void => {
     throw new Error("Related exam not found");
   }
   
-  // For intermediate exams, require letter grade
-  if (exam.tipo === 'intermedio') {
+  // Get the course to check if it uses letter grades
+  const courses = getCourses();
+  const course = courses.find(c => c.id === exam.courseId);
+  
+  if (!course) {
+    throw new Error("Related course not found");
+  }
+  
+  // For courses with letter grades
+  if (course.useLetterGrades) {
     if (!grade.votoLettera) {
-      throw new Error("Letter grade is required for intermediate exams");
+      throw new Error("Letter grade is required for courses with letter grades");
     }
     if (grade.votoNumerico !== undefined || grade.conLode !== undefined) {
-      throw new Error("Numeric grade and lode are not applicable for intermediate exams");
+      throw new Error("Numeric grade and lode are not applicable for courses with letter grades");
     }
   }
   
-  // For complete exams, require numeric grade
-  if (exam.tipo === 'completo') {
+  // For courses with numeric grades
+  if (!course.useLetterGrades) {
     if (grade.votoNumerico === undefined) {
-      throw new Error("Numeric grade is required for complete exams");
+      throw new Error("Numeric grade is required for courses with numeric grades");
     }
     if (grade.votoLettera !== undefined) {
-      throw new Error("Letter grade is not applicable for complete exams");
+      throw new Error("Letter grade is not applicable for courses with numeric grades");
     }
     if (grade.votoNumerico !== undefined && (grade.votoNumerico < 18 || grade.votoNumerico > 30)) {
       throw new Error("Numeric grade must be between 18 and 30");
     }
   }
   
-  // Check if student exists
-  const students = getStudents();
-  const student = students.find(s => s.matricola === grade.matricola);
-  if (!student) {
-    throw new Error("Student not found");
+  // Check if student exists only if not allowing non-registered students
+  if (!allowNonRegisteredStudents) {
+    const students = getStudents();
+    const student = students.find(s => s.matricola === grade.matricola);
+    if (!student) {
+      throw new Error("Student not found");
+    }
   }
 };
 
@@ -358,8 +368,6 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
   // Process each row
   let imported = 0;
   let errors = 0;
-  const students = getStudents();
-  const matricoleSet = new Set(students.map(s => s.matricola));
   
   for (let i = startIndex; i < rows.length; i++) {
     const columns = rows[i].split(',').map(col => col.trim());
@@ -373,14 +381,7 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
       
       const matricola = columns[0];
       
-      // Check if student exists
-      if (!matricoleSet.has(matricola)) {
-        errors++;
-        console.error(`Riga ${i+1}: matricola ${matricola} non trovata`);
-        continue;
-      }
-      
-      if (course.haIntermedio) {
+      if (course.useLetterGrades) {
         // For letter grades
         const votoLettera = columns[1].toUpperCase();
         

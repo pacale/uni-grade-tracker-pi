@@ -80,7 +80,6 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       // Import grades
       const result = importGradesFromCSV({
         csvData,
-        courseId: selectedExam.courseId,
         examId: selectedExam.id,
         examType: selectedExam.tipo,
         hasHeaderRow
@@ -145,7 +144,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             id="csvData"
             className="w-full h-40 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder={
-              selectedCourse?.haIntermedio
+              selectedCourse?.useLetterGrades
                 ? "matricola,voto\n0612710900,A\n0612710901,B"
                 : "matricola,voto,lode\n0612710900,30,true\n0612710901,28,false"
             }
@@ -155,7 +154,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
 
           <div className="text-sm text-muted-foreground">
             <p className="font-medium">Formato richiesto:</p>
-            {selectedCourse?.haIntermedio ? (
+            {selectedCourse?.useLetterGrades ? (
               <ul className="list-disc pl-5 space-y-1">
                 <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
                 <li><code>voto</code>: Voto letterale da A a F (obbligatorio)</li>

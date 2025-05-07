@@ -98,9 +98,12 @@ export const getCourseStats = (courseId: string): GradeStats => {
 };
 
 // Calculate statistics for an exam
-export const getExamStats = (examId: string): GradeStats => {
+export const getExamStats = (examId: string): GradeStats & { gradeCount: number } => {
   const examGrades = getGrades().filter(g => g.examId === examId);
-  return calculateStats(examGrades);
+  return {
+    ...calculateStats(examGrades),
+    gradeCount: examGrades.length
+  };
 };
 
 // Get all grades for a student
@@ -143,6 +146,18 @@ export const getStudentAverage = (matricola: string): number => {
   return parseFloat((totalScore / grades.length).toFixed(2));
 };
 
+// Get unique matricole with grades, regardless of being registered
+export const getUniqueMatricoleWithGrades = (): string[] => {
+  const grades = getGrades();
+  const uniqueMatricole = new Set<string>();
+  
+  grades.forEach(grade => {
+    uniqueMatricole.add(grade.matricola);
+  });
+  
+  return Array.from(uniqueMatricole);
+};
+
 // Get analytics data for dashboard
 export const getDashboardAnalytics = () => {
   const students = getStudents();
@@ -150,17 +165,51 @@ export const getDashboardAnalytics = () => {
   const exams = getExams();
   const grades = getGrades();
   
+  // Get unique matricole with grades (including those not registered)
+  const uniqueMatricoleWithGrades = getUniqueMatricoleWithGrades();
+  
   // Overall statistics
   const overallStats = calculateStats(grades);
   
-  // Course statistics
-  const courseStats = courses.map(course => {
-    const stats = getCourseStats(course.id);
-    return {
-      id: course.id,
-      name: course.nome,
-      stats
-    };
+  // Course statistics - group by courseId
+  const courseStatsMap = new Map();
+  exams.forEach(exam => {
+    const examStats = getExamStats(exam.id);
+    const course = courses.find(c => c.id === exam.courseId);
+    
+    if (course) {
+      if (!courseStatsMap.has(course.id)) {
+        courseStatsMap.set(course.id, {
+          id: course.id,
+          name: course.nome,
+          stats: {
+            average: 0,
+            passing: 0,
+            failing: 0,
+            passingPercentage: 0,
+            distribution: {},
+            totalGrades: 0
+          }
+        });
+      }
+      
+      const currentCourseStats = courseStatsMap.get(course.id);
+      const currentTotal = currentCourseStats.stats.totalGrades;
+      const newTotal = currentTotal + examStats.gradeCount;
+      
+      // Weighted average calculation
+      if (newTotal > 0) {
+        currentCourseStats.stats.average = 
+          (currentCourseStats.stats.average * currentTotal + examStats.average * examStats.gradeCount) / newTotal;
+        
+        // Update passing rate
+        currentCourseStats.stats.passing += examStats.passing;
+        currentCourseStats.stats.failing += examStats.failing;
+        currentCourseStats.stats.totalGrades = newTotal;
+        currentCourseStats.stats.passingPercentage = 
+          (currentCourseStats.stats.passing / newTotal) * 100;
+      }
+    }
   });
   
   // Recent exams
@@ -172,22 +221,36 @@ export const getDashboardAnalytics = () => {
       const stats = getExamStats(exam.id);
       return {
         id: exam.id,
-        date: exam.data,
-        type: exam.tipo,
-        courseName: course?.nome || '',
-        stats
+        date: new Date(exam.data).toLocaleDateString(),
+        courseName: course?.nome || 'Corso sconosciuto',
+        stats: stats,
+        grades: stats.gradeCount
       };
     });
   
   return {
     counts: {
-      students: students.length,
+      registeredStudents: students.length,
+      uniqueStudentsWithGrades: uniqueMatricoleWithGrades.length,
       courses: courses.length,
       exams: exams.length,
       grades: grades.length
     },
     overallStats,
-    courseStats,
+    courseStats: Array.from(courseStatsMap.values()).map(course => {
+      return {
+        id: course.id,
+        name: course.name,
+        stats: {
+          average: parseFloat(course.stats.average.toFixed(2)),
+          passing: course.stats.passing,
+          failing: course.stats.failing,
+          passingPercentage: parseFloat(course.stats.passingPercentage.toFixed(2)),
+          distribution: course.stats.distribution,
+          totalGrades: course.stats.totalGrades
+        }
+      };
+    }),
     recentExams
   };
 };
