@@ -1,18 +1,27 @@
-
-import { Exam, Grade, GradeStats, LetterGrade } from "@/types";
+import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades } from "@/types";
 import { getExams, getGrades, getStudents } from "./dataStorage";
 
 // Convert letter grade to numeric equivalent for calculations
 export const letterToNumeric = (letter: LetterGrade): number => {
   const mapping: Record<LetterGrade, number> = {
     'A': 30,
-    'B': 27,
-    'C': 24,
-    'D': 21,
-    'E': 18,
+    'B': 28, // 28-29 = B (using average 28.5)
+    'C': 26, // 25-27 = C (using average 26)
+    'D': 23, // 22-24 = D (using average 23)
+    'E': 19, // 18-21 = E (using average 19.5)
     'F': 0
   };
   return mapping[letter];
+};
+
+// Convert numeric grade to letter equivalent
+export const numericToLetter = (numeric: number): LetterGrade => {
+  if (numeric === 30) return 'A';
+  if (numeric >= 28 && numeric <= 29) return 'B';
+  if (numeric >= 25 && numeric <= 27) return 'C';
+  if (numeric >= 22 && numeric <= 24) return 'D';
+  if (numeric >= 18 && numeric <= 21) return 'E';
+  return 'F';
 };
 
 // Format grade for display
@@ -148,17 +157,87 @@ export const getUniqueMatricoleWithGrades = (): string[] => {
   return Array.from(uniqueMatricole);
 };
 
-// Get analytics data for dashboard
-export const getDashboardAnalytics = () => {
+// Get student ranking based on average grades
+export const getStudentRanking = (): StudentWithGrades[] => {
+  const matricole = getUniqueMatricoleWithGrades();
   const students = getStudents();
   const exams = getExams();
   const grades = getGrades();
   
+  const studentsWithGrades: StudentWithGrades[] = [];
+  
+  // Process each matricola (including those not in registered students)
+  matricole.forEach(matricola => {
+    // Find the student if registered
+    const registeredStudent = students.find(s => s.matricola === matricola);
+    
+    // Get all grades for this student
+    const studentGrades = grades.filter(g => g.matricola === matricola);
+    
+    // Convert to StudentWithGrades format
+    const gradesWithExams = studentGrades.map(grade => {
+      const exam = exams.find(e => e.id === grade.examId);
+      return {
+        ...grade,
+        exam: exam!
+      };
+    }).filter(g => g.exam); // Filter out any incomplete relations
+    
+    // Create StudentWithGrades object
+    const studentWithGrades: StudentWithGrades = {
+      id: registeredStudent?.id || `unregistered-${matricola}`,
+      matricola,
+      nome: registeredStudent?.nome || "Non registrato",
+      cognome: registeredStudent?.cognome || matricola,
+      grades: gradesWithExams
+    };
+    
+    studentsWithGrades.push(studentWithGrades);
+  });
+  
+  // Calculate average for each student and sort
+  return studentsWithGrades
+    .map(student => {
+      // Calculate student average
+      let totalScore = 0;
+      student.grades.forEach(grade => {
+        if (grade.votoLettera) {
+          totalScore += letterToNumeric(grade.votoLettera);
+        } else if (grade.votoNumerico) {
+          totalScore += grade.votoNumerico;
+        }
+      });
+      
+      const average = student.grades.length > 0 ? 
+        parseFloat((totalScore / student.grades.length).toFixed(2)) : 0;
+      
+      return {
+        ...student,
+        average
+      };
+    })
+    .sort((a, b) => (b.average || 0) - (a.average || 0)); // Sort by average (highest first)
+};
+
+// Get analytics data for dashboard
+export const getDashboardAnalytics = (examId?: string) => {
+  const students = getStudents();
+  const exams = getExams();
+  const grades = getGrades();
+  
+  // Filter grades by exam if specified
+  const filteredGrades = examId ? 
+    grades.filter(g => g.examId === examId) : 
+    grades;
+  
   // Get unique matricole with grades (including those not registered)
-  const uniqueMatricoleWithGrades = getUniqueMatricoleWithGrades();
+  const uniqueMatricoleWithGrades = new Set<string>();
+  filteredGrades.forEach(grade => {
+    uniqueMatricoleWithGrades.add(grade.matricola);
+  });
   
   // Overall statistics
-  const overallStats = calculateStats(grades);
+  const overallStats = calculateStats(filteredGrades);
   
   // Exam statistics
   const examStats = exams.map(exam => {
@@ -197,9 +276,9 @@ export const getDashboardAnalytics = () => {
   return {
     counts: {
       registeredStudents: students.length,
-      uniqueStudentsWithGrades: uniqueMatricoleWithGrades.length,
+      uniqueStudentsWithGrades: uniqueMatricoleWithGrades.size,
       exams: exams.length,
-      grades: grades.length
+      grades: filteredGrades.length
     },
     overallStats,
     examStats,

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -18,7 +17,7 @@ import Dashboard from "@/components/Dashboard";
 import StudentTable from "@/components/StudentTable";
 import GradeEntry from "@/components/GradeEntry";
 import { Student, Exam, ExamType } from "@/types";
-import { addStudent, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, getExams, addExam, deleteExam } from "@/utils/dataStorage";
+import { addStudent, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, getExams, addExam, deleteExam, updateExam } from "@/utils/dataStorage";
 import { formatGrade } from "@/utils/gradeUtils";
 import GradeImport from "@/components/GradeImport";
 import { Calendar, Edit, Trash2, List, Plus } from "lucide-react";
@@ -148,8 +147,9 @@ const Index = () => {
           tipo: newExam.tipo,
           useLetterGrades: newExam.useLetterGrades
         };
-        // Update the exam
-        // We would update the exam here if we had updateExam in dataStorage.ts
+        
+        // Call updateExam function
+        updateExam(updatedExam);
         toast.success("Esame aggiornato con successo");
       } else {
         // Add new exam
@@ -489,6 +489,7 @@ const Index = () => {
               setShowAddGrade(false);
               refreshData();
             }}
+            enableExamCreation={true}
           />
         </DialogContent>
       </Dialog>

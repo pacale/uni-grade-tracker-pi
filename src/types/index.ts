@@ -29,6 +29,7 @@ export type Grade = {
 
 export type StudentWithGrades = Student & {
   grades: (Grade & { exam: Exam })[];
+  average?: number;
 };
 
 export type GradeStats = {
