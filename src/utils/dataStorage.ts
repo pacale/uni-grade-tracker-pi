@@ -95,7 +95,11 @@ export const deleteStudent = (id: string): void => {
 
 // Courses
 export const addCourse = (course: Omit<Course, "id">): Course => {
-  const newCourse = { ...course, id: generateId() };
+  const newCourse = { 
+    ...course, 
+    id: generateId(),
+    useLetterGrades: course.useLetterGrades || false 
+  };
   const courses = getCourses();
   
   // Check for duplicate name
@@ -120,9 +124,12 @@ export const updateCourse = (course: Course): Course => {
     throw new Error("Course name already exists");
   }
   
-  courses[index] = course;
+  courses[index] = {
+    ...course,
+    useLetterGrades: course.useLetterGrades || false
+  };
   setCourses(courses);
-  return course;
+  return courses[index];
 };
 
 export const deleteCourse = (id: string): void => {
@@ -451,9 +458,9 @@ export const initializeSampleData = () => {
     
     // Sample courses
     const courses = [
-      { nome: "Programmazione", haIntermedio: true },
-      { nome: "Matematica Discreta", haIntermedio: true },
-      { nome: "Fisica", haIntermedio: false },
+      { nome: "Programmazione", haIntermedio: false, useLetterGrades: true },
+      { nome: "Matematica Discreta", haIntermedio: false, useLetterGrades: true },
+      { nome: "Fisica", haIntermedio: false, useLetterGrades: false },
     ];
     
     const createdCourses: Course[] = [];
@@ -471,27 +478,6 @@ export const initializeSampleData = () => {
       lastMonth.setMonth(now.getMonth() - 1);
       
       createdCourses.forEach(course => {
-        if (course.haIntermedio) {
-          // Intermediate exam
-          const interExam = addExam({
-            courseId: course.id,
-            tipo: 'intermedio',
-            data: lastMonth.toISOString().split('T')[0]
-          });
-          
-          // Add some grades for the intermediate exam
-          const letterGrades: LetterGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
-          students.forEach((student, index) => {
-            try {
-              addGrade({
-                matricola: student.matricola,
-                examId: interExam.id,
-                votoLettera: letterGrades[index % letterGrades.length]
-              });
-            } catch(e) { /* ignore */ }
-          });
-        }
-        
         // Complete exam
         const complExam = addExam({
           courseId: course.id,
@@ -502,16 +488,27 @@ export const initializeSampleData = () => {
         // Add some grades for the complete exam
         students.forEach((student, index) => {
           try {
-            const baseGrade = 18 + (index * 3);
-            const grade = Math.min(baseGrade, 30);
-            const conLode = grade === 30 && index % 3 === 0;
-            
-            addGrade({
-              matricola: student.matricola,
-              examId: complExam.id,
-              votoNumerico: grade,
-              conLode
-            });
+            if (course.useLetterGrades) {
+              // Letter grades
+              const letterGrades: LetterGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+              addGrade({
+                matricola: student.matricola,
+                examId: complExam.id,
+                votoLettera: letterGrades[index % letterGrades.length]
+              });
+            } else {
+              // Numeric grades
+              const baseGrade = 18 + (index * 3);
+              const grade = Math.min(baseGrade, 30);
+              const conLode = grade === 30 && index % 3 === 0;
+              
+              addGrade({
+                matricola: student.matricola,
+                examId: complExam.id,
+                votoNumerico: grade,
+                conLode
+              });
+            }
           } catch(e) { /* ignore */ }
         });
       });

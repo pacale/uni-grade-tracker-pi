@@ -112,7 +112,7 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
       };
       
       // Add the appropriate grade type based on course settings
-      if (selectedCourse?.haIntermedio) {
+      if (selectedCourse?.useLetterGrades) {
         gradeData.votoLettera = data.letterGrade as LetterGrade;
       } else {
         gradeData.votoNumerico = data.numericGrade;
@@ -120,12 +120,12 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
       }
       
       // Validate grade data
-      if (selectedCourse?.haIntermedio && !gradeData.votoLettera) {
+      if (selectedCourse?.useLetterGrades && !gradeData.votoLettera) {
         toast.error("Il voto in lettere è obbligatorio");
         return;
       }
       
-      if (!selectedCourse?.haIntermedio && !gradeData.votoNumerico) {
+      if (!selectedCourse?.useLetterGrades && !gradeData.votoNumerico) {
         toast.error("Il voto numerico è obbligatorio");
         return;
       }
@@ -198,7 +198,7 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
           />
 
           {/* Grade fields based on course type */}
-          {selectedCourse?.haIntermedio ? (
+          {selectedCourse?.useLetterGrades ? (
             <FormField
               control={form.control}
               name="letterGrade"

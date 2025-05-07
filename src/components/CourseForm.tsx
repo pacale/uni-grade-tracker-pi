@@ -15,7 +15,7 @@ interface CourseFormProps {
 
 const CourseForm = ({ course, onComplete }: CourseFormProps) => {
   const [nome, setNome] = useState(course?.nome || "");
-  const [votiInLettere, setVotiInLettere] = useState(course?.haIntermedio || false);
+  const [votiInLettere, setVotiInLettere] = useState(course?.useLetterGrades || false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,12 +35,17 @@ const CourseForm = ({ course, onComplete }: CourseFormProps) => {
         updateCourse({
           id: course.id,
           nome,
-          haIntermedio: votiInLettere // Mantenuto per compatibilità
+          haIntermedio: false, // We're not using this anymore
+          useLetterGrades: votiInLettere
         });
         toast.success("Corso aggiornato con successo");
       } else {
         // Create
-        addCourse({ nome, haIntermedio: votiInLettere }); // Mantenuto per compatibilità
+        addCourse({ 
+          nome, 
+          haIntermedio: false, // We're not using this anymore
+          useLetterGrades: votiInLettere 
+        });
         toast.success("Corso creato con successo");
       }
       

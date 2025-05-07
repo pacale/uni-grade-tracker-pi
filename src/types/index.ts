@@ -10,6 +10,7 @@ export type Course = {
   id: string;
   nome: string;
   haIntermedio: boolean;
+  useLetterGrades: boolean;
 };
 
 export type ExamType = 'intermedio' | 'completo';
