@@ -6,20 +6,14 @@ export type Student = {
   cognome: string;
 };
 
-export type Course = {
-  id: string;
-  nome: string;
-  haIntermedio: boolean;
-  useLetterGrades: boolean;
-};
-
 export type ExamType = 'intermedio' | 'completo';
 
 export type Exam = {
   id: string;
-  courseId: string;
+  nome: string;
   tipo: ExamType;
   data: string; // ISO date string
+  useLetterGrades: boolean;
 };
 
 export type LetterGrade = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
@@ -34,7 +28,7 @@ export type Grade = {
 };
 
 export type StudentWithGrades = Student & {
-  grades: (Grade & { exam: Exam; course: Course })[];
+  grades: (Grade & { exam: Exam })[];
 };
 
 export type GradeStats = {

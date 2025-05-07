@@ -1,8 +1,8 @@
-import { Student, Course, Exam, Grade, ExamType, LetterGrade } from "@/types";
+
+import { Student, Exam, Grade, ExamType, LetterGrade } from "@/types";
 
 // Local storage keys
 const STUDENTS_KEY = "sgvu_students";
-const COURSES_KEY = "sgvu_courses";
 const EXAMS_KEY = "sgvu_exams";
 const GRADES_KEY = "sgvu_grades";
 
@@ -19,15 +19,6 @@ export const getStudents = (): Student[] => {
 
 export const setStudents = (students: Student[]): void => {
   localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
-};
-
-export const getCourses = (): Course[] => {
-  const data = localStorage.getItem(COURSES_KEY);
-  return data ? JSON.parse(data) : [];
-};
-
-export const setCourses = (courses: Course[]): void => {
-  localStorage.setItem(COURSES_KEY, JSON.stringify(courses));
 };
 
 export const getExams = (): Exam[] => {
@@ -91,58 +82,6 @@ export const deleteStudent = (id: string): void => {
   if (student) {
     setGrades(grades.filter(g => g.matricola !== student.matricola));
   }
-};
-
-// Courses
-export const addCourse = (course: Omit<Course, "id">): Course => {
-  const newCourse = { 
-    ...course, 
-    id: generateId(),
-    useLetterGrades: course.useLetterGrades || false 
-  };
-  const courses = getCourses();
-  
-  // Check for duplicate name
-  if (courses.some(c => c.nome.toLowerCase() === course.nome.toLowerCase())) {
-    throw new Error("Course name already exists");
-  }
-  
-  setCourses([...courses, newCourse]);
-  return newCourse;
-};
-
-export const updateCourse = (course: Course): Course => {
-  const courses = getCourses();
-  const index = courses.findIndex(c => c.id === course.id);
-  
-  if (index === -1) {
-    throw new Error("Course not found");
-  }
-  
-  // Check for duplicate name (excluding current course)
-  if (courses.some(c => c.nome.toLowerCase() === course.nome.toLowerCase() && c.id !== course.id)) {
-    throw new Error("Course name already exists");
-  }
-  
-  courses[index] = {
-    ...course,
-    useLetterGrades: course.useLetterGrades || false
-  };
-  setCourses(courses);
-  return courses[index];
-};
-
-export const deleteCourse = (id: string): void => {
-  const courses = getCourses();
-  setCourses(courses.filter(c => c.id !== id));
-  
-  // Also delete related exams and grades
-  const exams = getExams().filter(e => e.courseId !== id);
-  setExams(exams);
-  
-  const examIds = exams.map(e => e.id);
-  const grades = getGrades().filter(g => !examIds.includes(g.examId));
-  setGrades(grades);
 };
 
 // Exams
@@ -218,31 +157,23 @@ const validateGrade = (grade: Grade, allowNonRegisteredStudents: boolean = false
     throw new Error("Related exam not found");
   }
   
-  // Get the course to check if it uses letter grades
-  const courses = getCourses();
-  const course = courses.find(c => c.id === exam.courseId);
-  
-  if (!course) {
-    throw new Error("Related course not found");
-  }
-  
-  // For courses with letter grades
-  if (course.useLetterGrades) {
+  // For exams with letter grades
+  if (exam.useLetterGrades) {
     if (!grade.votoLettera) {
-      throw new Error("Letter grade is required for courses with letter grades");
+      throw new Error("Letter grade is required for exams with letter grades");
     }
     if (grade.votoNumerico !== undefined || grade.conLode !== undefined) {
-      throw new Error("Numeric grade and lode are not applicable for courses with letter grades");
+      throw new Error("Numeric grade and lode are not applicable for exams with letter grades");
     }
   }
   
-  // For courses with numeric grades
-  if (!course.useLetterGrades) {
+  // For exams with numeric grades
+  if (!exam.useLetterGrades) {
     if (grade.votoNumerico === undefined) {
-      throw new Error("Numeric grade is required for courses with numeric grades");
+      throw new Error("Numeric grade is required for exams with numeric grades");
     }
     if (grade.votoLettera !== undefined) {
-      throw new Error("Letter grade is not applicable for courses with numeric grades");
+      throw new Error("Letter grade is not applicable for exams with numeric grades");
     }
     if (grade.votoNumerico !== undefined && (grade.votoNumerico < 18 || grade.votoNumerico > 30)) {
       throw new Error("Numeric grade must be between 18 and 30");
@@ -270,18 +201,15 @@ export const getStudentWithGrades = (matricola: string) => {
   
   const grades = getGrades().filter(g => g.matricola === matricola);
   const exams = getExams();
-  const courses = getCourses();
   
   const gradesWithDetails = grades.map(grade => {
     const exam = exams.find(e => e.id === grade.examId);
-    const course = exam ? courses.find(c => c.id === exam.courseId) : null;
     
     return {
       ...grade,
-      exam: exam!,
-      course: course!
+      exam: exam!
     };
-  }).filter(g => g.exam && g.course); // Filter out any incomplete relations
+  }).filter(g => g.exam); // Filter out any incomplete relations
   
   return {
     ...student,
@@ -335,7 +263,7 @@ export const importStudentsFromCSV = (csv: string): Student[] => {
 // Import grades from CSV
 interface GradeImportOptions {
   csvData: string;
-  examId: string; // Now using the examId directly
+  examId: string;
   examType: ExamType;
   hasHeaderRow: boolean;
 }
@@ -364,14 +292,6 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
     throw new Error("Esame non trovato");
   }
   
-  // Get the course
-  const courses = getCourses();
-  const course = courses.find(c => c.id === exam.courseId);
-  
-  if (!course) {
-    throw new Error("Corso non trovato");
-  }
-  
   // Process each row
   let imported = 0;
   let errors = 0;
@@ -388,7 +308,7 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
       
       const matricola = columns[0];
       
-      if (course.useLetterGrades) {
+      if (exam.useLetterGrades) {
         // For letter grades
         const votoLettera = columns[1].toUpperCase();
         
@@ -444,7 +364,7 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
 
 // Initialize with sample data if empty
 export const initializeSampleData = () => {
-  if (getStudents().length === 0 && getCourses().length === 0) {
+  if (getStudents().length === 0 && getExams().length === 0) {
     // Sample students
     const students = [
       { matricola: "0612710901", nome: "Marco", cognome: "Rossi" },
@@ -456,44 +376,33 @@ export const initializeSampleData = () => {
       try { addStudent(student); } catch(e) { /* ignore */ }
     });
     
-    // Sample courses
-    const courses = [
-      { nome: "Programmazione", haIntermedio: false, useLetterGrades: true },
-      { nome: "Matematica Discreta", haIntermedio: false, useLetterGrades: true },
-      { nome: "Fisica", haIntermedio: false, useLetterGrades: false },
+    // Sample exams
+    const exams = [
+      { nome: "Programmazione - Prova finale", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: true },
+      { nome: "Matematica Discreta - Primo appello", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: true },
+      { nome: "Fisica - Computo finale", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: false },
     ];
     
-    const createdCourses: Course[] = [];
-    courses.forEach(course => {
+    const createdExams: Exam[] = [];
+    exams.forEach(exam => {
       try { 
-        const newCourse = addCourse(course);
-        createdCourses.push(newCourse);
+        const newExam = addExam(exam);
+        createdExams.push(newExam);
       } catch(e) { /* ignore */ }
     });
     
-    if (createdCourses.length > 0) {
-      // Add sample exams and grades
-      const now = new Date();
-      const lastMonth = new Date(now);
-      lastMonth.setMonth(now.getMonth() - 1);
-      
-      createdCourses.forEach(course => {
-        // Complete exam
-        const complExam = addExam({
-          courseId: course.id,
-          tipo: 'completo',
-          data: now.toISOString().split('T')[0]
-        });
-        
-        // Add some grades for the complete exam
+    if (createdExams.length > 0) {
+      // Add sample grades
+      createdExams.forEach(exam => {
+        // Add some grades for each exam
         students.forEach((student, index) => {
           try {
-            if (course.useLetterGrades) {
+            if (exam.useLetterGrades) {
               // Letter grades
               const letterGrades: LetterGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
               addGrade({
                 matricola: student.matricola,
-                examId: complExam.id,
+                examId: exam.id,
                 votoLettera: letterGrades[index % letterGrades.length]
               });
             } else {
@@ -504,7 +413,7 @@ export const initializeSampleData = () => {
               
               addGrade({
                 matricola: student.matricola,
-                examId: complExam.id,
+                examId: exam.id,
                 votoNumerico: grade,
                 conLode
               });

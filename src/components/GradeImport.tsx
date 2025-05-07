@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Course, Exam, Student } from "@/types";
+import { Exam, Student } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getCourses, getExams, importGradesFromCSV } from "@/utils/dataStorage";
+import { getExams, importGradesFromCSV } from "@/utils/dataStorage";
 import {
   Select,
   SelectContent,
@@ -21,37 +21,26 @@ interface GradeImportProps {
 
 const GradeImport = ({ onComplete }: GradeImportProps) => {
   const [exams, setExams] = useState<Exam[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
   const [csvData, setCsvData] = useState("");
   const [examId, setExamId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [hasHeaderRow, setHasHeaderRow] = useState(true);
 
   useEffect(() => {
-    // Load courses and exams
-    setCourses(getCourses());
+    // Load exams
     setExams(getExams());
   }, []);
   
-  // Update selected exam and course when examId changes
+  // Update selected exam when examId changes
   useEffect(() => {
     if (examId) {
       const exam = exams.find(e => e.id === examId) || null;
       setSelectedExam(exam);
-      
-      if (exam) {
-        const course = courses.find(c => c.id === exam.courseId) || null;
-        setSelectedCourse(course);
-      } else {
-        setSelectedCourse(null);
-      }
     } else {
       setSelectedExam(null);
-      setSelectedCourse(null);
     }
-  }, [examId, exams, courses]);
+  }, [examId, exams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,11 +103,10 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             </SelectTrigger>
             <SelectContent>
               {exams.map((exam) => {
-                const course = courses.find(c => c.id === exam.courseId);
                 const formattedDate = new Date(exam.data).toLocaleDateString();
                 return (
                   <SelectItem key={exam.id} value={exam.id}>
-                    {course?.nome || "Corso sconosciuto"} - {formattedDate}
+                    {exam.nome} - {formattedDate}
                   </SelectItem>
                 );
               })}
@@ -144,7 +132,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             id="csvData"
             className="w-full h-40 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder={
-              selectedCourse?.useLetterGrades
+              selectedExam?.useLetterGrades
                 ? "matricola,voto\n0612710900,A\n0612710901,B"
                 : "matricola,voto,lode\n0612710900,30,true\n0612710901,28,false"
             }
@@ -154,7 +142,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
 
           <div className="text-sm text-muted-foreground">
             <p className="font-medium">Formato richiesto:</p>
-            {selectedCourse?.useLetterGrades ? (
+            {selectedExam?.useLetterGrades ? (
               <ul className="list-disc pl-5 space-y-1">
                 <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
                 <li><code>voto</code>: Voto letterale da A a F (obbligatorio)</li>

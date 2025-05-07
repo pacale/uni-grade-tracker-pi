@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Course, 
   Exam, 
   ExamType, 
   Grade, 
@@ -9,7 +8,6 @@ import {
   Student 
 } from "@/types";
 import { 
-  getCourses, 
   getExams, 
   getStudents,
   addGrade
@@ -50,11 +48,9 @@ interface FormData {
 }
 
 const GradeEntry = ({ onComplete }: GradeEntryProps) => {
-  const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -68,7 +64,6 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
   
   useEffect(() => {
     // Load data
-    setCourses(getCourses());
     setStudents(getStudents());
     setExams(getExams());
   }, []);
@@ -78,18 +73,10 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
     if (watchExamId) {
       const exam = exams.find(e => e.id === watchExamId) || null;
       setSelectedExam(exam);
-      
-      if (exam) {
-        const course = courses.find(c => c.id === exam.courseId) || null;
-        setSelectedCourse(course);
-      } else {
-        setSelectedCourse(null);
-      }
     } else {
       setSelectedExam(null);
-      setSelectedCourse(null);
     }
-  }, [watchExamId, exams, courses]);
+  }, [watchExamId, exams]);
   
   const onSubmit = async (data: FormData) => {
     try {
@@ -111,8 +98,8 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
         examId: data.examId
       };
       
-      // Add the appropriate grade type based on course settings
-      if (selectedCourse?.useLetterGrades) {
+      // Add the appropriate grade type based on exam settings
+      if (selectedExam.useLetterGrades) {
         gradeData.votoLettera = data.letterGrade as LetterGrade;
       } else {
         gradeData.votoNumerico = data.numericGrade;
@@ -120,12 +107,12 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
       }
       
       // Validate grade data
-      if (selectedCourse?.useLetterGrades && !gradeData.votoLettera) {
+      if (selectedExam.useLetterGrades && !gradeData.votoLettera) {
         toast.error("Il voto in lettere è obbligatorio");
         return;
       }
       
-      if (!selectedCourse?.useLetterGrades && !gradeData.votoNumerico) {
+      if (!selectedExam.useLetterGrades && !gradeData.votoNumerico) {
         toast.error("Il voto numerico è obbligatorio");
         return;
       }
@@ -157,11 +144,10 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
                   </FormControl>
                   <SelectContent>
                     {exams.map((exam) => {
-                      const course = courses.find(c => c.id === exam.courseId);
                       const formattedDate = new Date(exam.data).toLocaleDateString();
                       return (
                         <SelectItem key={exam.id} value={exam.id}>
-                          {course?.nome || "Corso sconosciuto"} - {formattedDate}
+                          {exam.nome} - {formattedDate}
                         </SelectItem>
                       );
                     })}
@@ -197,8 +183,8 @@ const GradeEntry = ({ onComplete }: GradeEntryProps) => {
             )}
           />
 
-          {/* Grade fields based on course type */}
-          {selectedCourse?.useLetterGrades ? (
+          {/* Grade fields based on exam type */}
+          {selectedExam?.useLetterGrades ? (
             <FormField
               control={form.control}
               name="letterGrade"

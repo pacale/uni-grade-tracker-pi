@@ -16,13 +16,13 @@ import { toast } from "sonner";
 
 import Dashboard from "@/components/Dashboard";
 import StudentTable from "@/components/StudentTable";
-import CourseForm from "@/components/CourseForm";
 import GradeEntry from "@/components/GradeEntry";
-import { Course, Student, Exam, ExamType } from "@/types";
-import { addStudent, getCourses, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, getExams, addExam, deleteExam } from "@/utils/dataStorage";
+import { Student, Exam, ExamType } from "@/types";
+import { addStudent, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, getExams, addExam, deleteExam } from "@/utils/dataStorage";
 import { formatGrade } from "@/utils/gradeUtils";
 import GradeImport from "@/components/GradeImport";
 import { Calendar, Edit, Trash2, List, Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -43,14 +43,14 @@ const Index = () => {
   });
   
   const [newExam, setNewExam] = useState({
+    nome: "",
     tipo: "completo" as ExamType,
     data: new Date().toISOString().split('T')[0],
-    courseId: ""
+    useLetterGrades: false
   });
   
   const [csvData, setCsvData] = useState("");
   const [studentDetail, setStudentDetail] = useState<any>(null);
-  const [courses, setCourses] = useState<Course[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
 
   // Initialize sample data if needed
@@ -61,7 +61,6 @@ const Index = () => {
 
   const refreshData = () => {
     setRefreshTrigger(prev => prev + 1);
-    setCourses(getCourses());
     setExams(getExams());
   };
 
@@ -134,8 +133,8 @@ const Index = () => {
   };
 
   const handleAddExam = () => {
-    if (!newExam.data || !newExam.courseId) {
-      toast.error("La data e il corso sono obbligatori");
+    if (!newExam.nome || !newExam.data) {
+      toast.error("Il nome e la data sono obbligatori");
       return;
     }
     
@@ -144,9 +143,12 @@ const Index = () => {
         // Update existing exam
         const updatedExam = { 
           ...editingExam, 
+          nome: newExam.nome,
           data: newExam.data, 
-          tipo: newExam.tipo 
+          tipo: newExam.tipo,
+          useLetterGrades: newExam.useLetterGrades
         };
+        // Update the exam
         // We would update the exam here if we had updateExam in dataStorage.ts
         toast.success("Esame aggiornato con successo");
       } else {
@@ -160,9 +162,10 @@ const Index = () => {
       setShowAddExam(false);
       setEditingExam(null);
       setNewExam({
+        nome: "",
         tipo: "completo",
         data: new Date().toISOString().split('T')[0],
-        courseId: courses.length > 0 ? courses[0].id : ""
+        useLetterGrades: false
       });
       refreshData();
     } catch (error) {
@@ -173,9 +176,10 @@ const Index = () => {
   const handleEditExam = (exam: Exam) => {
     setEditingExam(exam);
     setNewExam({
+      nome: exam.nome,
       tipo: exam.tipo,
       data: exam.data,
-      courseId: exam.courseId
+      useLetterGrades: exam.useLetterGrades
     });
     setShowAddExam(true);
   };
@@ -189,16 +193,6 @@ const Index = () => {
       toast.error(error instanceof Error ? error.message : "Errore durante l'eliminazione dell'esame");
     }
   };
-
-  // Set default course when exams tab is selected
-  useEffect(() => {
-    if (activeTab === "exams" && courses.length > 0 && !newExam.courseId) {
-      setNewExam(prev => ({
-        ...prev,
-        courseId: courses[0].id
-      }));
-    }
-  }, [activeTab, courses]);
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -258,46 +252,42 @@ const Index = () => {
                 Nessun esame presente. Aggiungi un nuovo esame per iniziare.
               </p>
             ) : (
-              exams.map((exam) => {
-                const course = courses.find(c => c.id === exam.courseId);
-                return (
-                  <Card key={exam.id}>
-                    <CardHeader>
-                      <CardTitle>{course?.nome || "Corso sconosciuto"}</CardTitle>
-                      <CardDescription>
-                        Data: {new Date(exam.data).toLocaleDateString()}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm mb-4">
-                        Tipo: {exam.tipo === 'completo' ? 
-                          (course?.haIntermedio ? 'Voti in lettere (A-F)' : 'Voti numerici (18-30)') : 
-                          'Intermedio'}
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full"
-                        onClick={() => handleEditExam(exam)}
-                      >
-                        <Edit className="mr-2" size={16} />
-                        Modifica
-                      </Button>
-                    </CardContent>
-                    <CardFooter>
-                      <Button 
-                        variant="destructive"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => handleDeleteExam(exam.id)}
-                      >
-                        <Trash2 className="mr-1" size={16} />
-                        Elimina
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              })
+              exams.map((exam) => (
+                <Card key={exam.id}>
+                  <CardHeader>
+                    <CardTitle>{exam.nome}</CardTitle>
+                    <CardDescription>
+                      Data: {new Date(exam.data).toLocaleDateString()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm mb-4">
+                      Tipo: {exam.tipo === 'completo' ? 'Completo' : 'Intermedio'}<br />
+                      Valutazione: {exam.useLetterGrades ? 'In lettere (A-F)' : 'Numerica (18-30)'}
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleEditExam(exam)}
+                    >
+                      <Edit className="mr-2" size={16} />
+                      Modifica
+                    </Button>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      variant="destructive"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleDeleteExam(exam.id)}
+                    >
+                      <Trash2 className="mr-1" size={16} />
+                      Elimina
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))
             )}
           </div>
         </TabsContent>
@@ -427,20 +417,14 @@ const Index = () => {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            {/* Course selection - simplify since there's only one course now */}
-            {courses.length > 0 && (
-              <div className="space-y-2">
-                <Label>Corso</Label>
-                <p className="p-2 bg-muted rounded">
-                  {courses[0]?.nome || "Nessun corso disponibile"}
-                </p>
-                <input 
-                  type="hidden" 
-                  value={courses[0]?.id || ""}
-                  onChange={(e) => setNewExam({...newExam, courseId: e.target.value})}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="examName">Nome dell'esame</Label>
+              <Input
+                id="examName"
+                value={newExam.nome}
+                onChange={(e) => setNewExam({...newExam, nome: e.target.value})}
+              />
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="examDate">Data dell'esame</Label>
@@ -451,15 +435,33 @@ const Index = () => {
                 onChange={(e) => setNewExam({...newExam, data: e.target.value})}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Tipo di valutazione</Label>
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox 
+                  id="useLetterGrades"
+                  checked={newExam.useLetterGrades}
+                  onCheckedChange={(checked) => setNewExam({...newExam, useLetterGrades: !!checked})}
+                />
+                <Label htmlFor="useLetterGrades">Usa voti in lettere (A-F)</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {newExam.useLetterGrades 
+                  ? "I voti verranno espressi in lettere da A a F." 
+                  : "I voti verranno espressi in numeri da 18 a 30, con possibilità di lode."}
+              </p>
+            </div>
             
             <div className="flex justify-end space-x-2 pt-4">
               <Button variant="outline" onClick={() => {
                 setShowAddExam(false);
                 setEditingExam(null);
                 setNewExam({
+                  nome: "",
                   tipo: "completo",
                   data: new Date().toISOString().split('T')[0],
-                  courseId: courses.length > 0 ? courses[0].id : ""
+                  useLetterGrades: false
                 });
               }}>
                 Annulla
@@ -526,7 +528,7 @@ const Index = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="px-4 py-2 text-left">Corso</th>
+                      <th className="px-4 py-2 text-left">Esame</th>
                       <th className="px-4 py-2 text-left">Tipo</th>
                       <th className="px-4 py-2 text-left">Data</th>
                       <th className="px-4 py-2 text-left">Voto</th>
@@ -535,11 +537,11 @@ const Index = () => {
                   <tbody>
                     {studentDetail.grades.map((grade: any) => (
                       <tr key={grade.id} className="border-b hover:bg-muted/50">
-                        <td className="px-4 py-2">{grade.course.nome}</td>
+                        <td className="px-4 py-2">{grade.exam.nome}</td>
                         <td className="px-4 py-2">
                           {grade.exam.tipo === 'intermedio' ? 'Intermedio' : 'Completo'}
                         </td>
-                        <td className="px-4 py-2">{grade.exam.data}</td>
+                        <td className="px-4 py-2">{new Date(grade.exam.data).toLocaleDateString()}</td>
                         <td className="px-4 py-2 font-medium">
                           {formatGrade(grade)}
                         </td>
