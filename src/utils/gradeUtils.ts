@@ -1,4 +1,4 @@
-import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades } from "@/types";
+import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades, ExamWithStats } from "@/types";
 import { getExams, getGrades, getStudents } from "./dataStorage";
 
 // Convert letter grade to numeric equivalent for calculations
@@ -219,6 +219,38 @@ export const getStudentRanking = (): StudentWithGrades[] => {
     .sort((a, b) => (b.average || 0) - (a.average || 0)); // Sort by average (highest first)
 };
 
+// Get exam ranking based on average grades
+export const getExamRanking = (): ExamWithStats[] => {
+  const exams = getExams();
+  const grades = getGrades();
+  
+  const examsWithStats: ExamWithStats[] = [];
+  
+  // Process each exam
+  exams.forEach(exam => {
+    // Get all grades for this exam
+    const examGrades = grades.filter(g => g.examId === exam.id);
+    
+    // Calculate statistics
+    const stats = calculateStats(examGrades);
+    
+    // Count unique students for this exam
+    const uniqueStudents = new Set(examGrades.map(g => g.matricola)).size;
+    
+    // Create ExamWithStats object
+    const examWithStats: ExamWithStats = {
+      ...exam,
+      stats,
+      studentCount: uniqueStudents
+    };
+    
+    examsWithStats.push(examWithStats);
+  });
+  
+  // Sort by average (highest first)
+  return examsWithStats.sort((a, b) => b.stats.average - a.stats.average);
+};
+
 // Get analytics data for dashboard
 export const getDashboardAnalytics = (examId?: string) => {
   const students = getStudents();
@@ -239,40 +271,6 @@ export const getDashboardAnalytics = (examId?: string) => {
   // Overall statistics
   const overallStats = calculateStats(filteredGrades);
   
-  // Exam statistics
-  const examStats = exams.map(exam => {
-    const stats = getExamStats(exam.id);
-    return {
-      id: exam.id,
-      name: exam.nome,
-      date: new Date(exam.data).toLocaleDateString(),
-      stats: {
-        average: stats.average,
-        passing: stats.passing,
-        failing: stats.failing,
-        passingPercentage: stats.passingPercentage,
-        distribution: stats.distribution,
-        totalGrades: stats.gradeCount
-      },
-      gradeType: exam.useLetterGrades ? 'lettera' : 'numerica'
-    };
-  });
-  
-  // Recent exams
-  const recentExams = [...exams]
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-    .slice(0, 5)
-    .map(exam => {
-      const stats = getExamStats(exam.id);
-      return {
-        id: exam.id,
-        name: exam.nome,
-        date: new Date(exam.data).toLocaleDateString(),
-        stats: stats,
-        grades: stats.gradeCount
-      };
-    });
-  
   return {
     counts: {
       registeredStudents: students.length,
@@ -280,8 +278,6 @@ export const getDashboardAnalytics = (examId?: string) => {
       exams: exams.length,
       grades: filteredGrades.length
     },
-    overallStats,
-    examStats,
-    recentExams
+    overallStats
   };
 };

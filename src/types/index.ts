@@ -32,6 +32,11 @@ export type StudentWithGrades = Student & {
   average?: number;
 };
 
+export type ExamWithStats = Exam & {
+  stats: GradeStats;
+  studentCount: number;
+};
+
 export type GradeStats = {
   average: number;
   passing: number;

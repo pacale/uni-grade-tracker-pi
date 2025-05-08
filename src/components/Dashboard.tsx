@@ -1,9 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getDashboardAnalytics, getStudentRanking } from "@/utils/gradeUtils";
+import { getDashboardAnalytics, getStudentRanking, getExamRanking } from "@/utils/gradeUtils";
 import {
   Select,
   SelectContent,
@@ -12,26 +11,52 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getExams } from "@/utils/dataStorage";
-import { Exam, StudentWithGrades } from "@/types";
+import { Exam, StudentWithGrades, ExamWithStats } from "@/types";
 import { formatGrade } from "@/utils/gradeUtils";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const Dashboard = () => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedExamId, setSelectedExamId] = useState<string | undefined>(undefined);
+  const [selectedExamId, setSelectedExamId] = useState<string>("");
   const [exams, setExams] = useState<Exam[]>([]);
   const [studentRanking, setStudentRanking] = useState<StudentWithGrades[]>([]);
+  const [examRanking, setExamRanking] = useState<ExamWithStats[]>([]);
 
   useEffect(() => {
     const loadData = () => {
       try {
-        setExams(getExams());
-        const data = getDashboardAnalytics(selectedExamId);
-        setAnalytics(data);
+        const availableExams = getExams();
+        setExams(availableExams);
         
-        // Load student ranking
-        const ranking = getStudentRanking();
-        setStudentRanking(ranking);
+        // Set first exam as default if none selected and exams are available
+        if (!selectedExamId && availableExams.length > 0) {
+          setSelectedExamId(availableExams[0].id);
+        }
+        
+        // Only load dashboard data if an exam is selected
+        if (selectedExamId) {
+          const data = getDashboardAnalytics(selectedExamId);
+          setAnalytics(data);
+          
+          // Load student ranking for the selected exam
+          const ranking = getStudentRanking();
+          setStudentRanking(ranking.filter(student => 
+            student.grades.some(grade => grade.examId === selectedExamId)
+          ));
+          
+          // Load exam ranking
+          const examRank = getExamRanking();
+          setExamRanking(examRank);
+        }
       } catch (error) {
         console.error("Error loading analytics:", error);
       } finally {
@@ -41,16 +66,6 @@ const Dashboard = () => {
 
     loadData();
   }, [selectedExamId]);
-
-  const prepareChartData = () => {
-    if (!analytics?.examStats) return [];
-    
-    return analytics.examStats.map((exam: any) => ({
-      name: exam.name,
-      average: exam.stats.average,
-      passing: exam.stats.passingPercentage,
-    }));
-  };
 
   const prepareDistributionData = () => {
     if (!analytics?.overallStats?.distribution) return [];
@@ -72,6 +87,30 @@ const Dashboard = () => {
     );
   }
 
+  if (!selectedExamId) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-medium">Seleziona un esame per visualizzare le statistiche</p>
+          <div className="mt-4 w-64 mx-auto">
+            <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona un esame" />
+              </SelectTrigger>
+              <SelectContent>
+                {exams.map((exam) => (
+                  <SelectItem key={exam.id} value={exam.id}>
+                    {exam.nome} ({new Date(exam.data).toLocaleDateString()})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
@@ -79,10 +118,9 @@ const Dashboard = () => {
         <div className="w-64">
           <Select value={selectedExamId} onValueChange={setSelectedExamId}>
             <SelectTrigger>
-              <SelectValue placeholder="Tutti gli esami" />
+              <SelectValue placeholder="Seleziona un esame" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={undefined}>Tutti gli esami</SelectItem>
               {exams.map((exam) => (
                 <SelectItem key={exam.id} value={exam.id}>
                   {exam.nome} ({new Date(exam.data).toLocaleDateString()})
@@ -101,19 +139,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{analytics?.counts.uniqueStudentsWithGrades || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Studenti che hanno ricevuto almeno un voto
-              {selectedExamId ? " per questo esame" : ""}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Esami</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics?.counts.exams || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Sessioni d'esame registrate
+              Studenti che hanno ricevuto voti per questo esame
             </p>
           </CardContent>
         </Card>
@@ -124,34 +150,44 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{analytics?.counts.grades || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Totale voti registrati
-              {selectedExamId ? " per questo esame" : ""}
+              Totale voti registrati per questo esame
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Media generale</CardTitle>
+            <CardTitle className="text-sm font-medium">Media</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {analytics?.overallStats?.average || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Media di tutti i voti
-              {selectedExamId ? " per questo esame" : ""}
+              Media dei voti per questo esame
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Percentuale approvati</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {analytics?.overallStats?.passingPercentage || 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Percentuale di studenti che hanno superato l'esame
             </p>
           </CardContent>
         </Card>
       </div>
       
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1">
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Distribuzione dei voti</CardTitle>
             <CardDescription>
-              Frequenza dei voti 
-              {selectedExamId ? " per questo esame" : " di tutti gli esami"}
+              Frequenza dei voti per questo esame
             </CardDescription>
           </CardHeader>
           <CardContent className="h-80">
@@ -166,108 +202,95 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Statistiche per esame</CardTitle>
-            <CardDescription>
-              Media e percentuale di approvazione
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={prepareChartData()}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="average" name="Media" fill="#1a75ff" />
-                <Bar dataKey="passing" name="% Approvazione" fill="#4d94ff" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Classifica Studenti</CardTitle>
+          <CardTitle>Classifica Studenti per questo esame</CardTitle>
           <CardDescription>
-            Studenti ordinati per media voti (più alta in cima)
+            Studenti ordinati per voto (più alto in cima)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">Posizione</th>
-                  <th className="px-4 py-2 text-left font-medium">Matricola</th>
-                  <th className="px-4 py-2 text-left font-medium">Nome</th>
-                  <th className="px-4 py-2 text-left font-medium">Cognome</th>
-                  <th className="px-4 py-2 text-right font-medium">Media</th>
-                  <th className="px-4 py-2 text-right font-medium">Esami</th>
-                </tr>
-              </thead>
-              <tbody>
-                {studentRanking.map((student, index) => (
-                  <tr key={student.id} className="border-t hover:bg-muted/50">
-                    <td className="px-4 py-2 font-medium">{index + 1}</td>
-                    <td className="px-4 py-2">{student.matricola}</td>
-                    <td className="px-4 py-2">{student.nome}</td>
-                    <td className="px-4 py-2">{student.cognome}</td>
-                    <td className="px-4 py-2 text-right font-medium">{student.average}</td>
-                    <td className="px-4 py-2 text-right">{student.grades.length}</td>
-                  </tr>
-                ))}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Posizione</TableHead>
+                  <TableHead>Matricola</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Cognome</TableHead>
+                  <TableHead className="text-right">Voto</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {studentRanking.map((student, index) => {
+                  const examGrade = student.grades.find(g => g.examId === selectedExamId);
+                  if (!examGrade) return null;
+                  
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell>{student.matricola}</TableCell>
+                      <TableCell>{student.nome}</TableCell>
+                      <TableCell>{student.cognome}</TableCell>
+                      <TableCell className="text-right font-medium">{formatGrade(examGrade)}</TableCell>
+                    </TableRow>
+                  );
+                })}
                 {studentRanking.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       Nessun dato disponibile
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Esami recenti</CardTitle>
+          <CardTitle>Classifica Esami</CardTitle>
           <CardDescription>
-            Ultimi esami registrati
+            Esami ordinati per media voti (più alta in cima)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-8">
-            {analytics?.recentExams?.length > 0 ? (
-              analytics.recentExams.map((exam: any) => (
-                <div key={exam.id} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {exam.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {exam.date}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      Media: {exam.stats.average}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {exam.grades} voti | Passati: {exam.stats.passing}/{exam.stats.passing + exam.stats.failing} ({exam.stats.passingPercentage}%)
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Nessun esame registrato
-              </p>
-            )}
+          <div className="rounded-md border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Posizione</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="text-right">Media</TableHead>
+                  <TableHead className="text-right">Studenti</TableHead>
+                  <TableHead className="text-right">% Approvazione</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {examRanking.map((exam, index) => (
+                  <TableRow key={exam.id} className={exam.id === selectedExamId ? "bg-muted" : undefined}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell>{exam.nome}</TableCell>
+                    <TableCell>{new Date(exam.data).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right font-medium">{exam.stats.average}</TableCell>
+                    <TableCell className="text-right">{exam.studentCount}</TableCell>
+                    <TableCell className="text-right">{exam.stats.passingPercentage}%</TableCell>
+                  </TableRow>
+                ))}
+                {examRanking.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Nessun dato disponibile
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
