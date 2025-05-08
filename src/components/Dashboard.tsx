@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getDashboardAnalytics, getStudentRanking, getExamRanking } from "@/utils/gradeUtils";
+import { getDashboardAnalytics, getStudentRanking, getExamRanking, getGlobalStudentRanking } from "@/utils/gradeUtils";
 import {
   Select,
   SelectContent,
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getExams } from "@/utils/dataStorage";
 import { Exam, StudentWithGrades, ExamWithStats } from "@/types";
 import { formatGrade } from "@/utils/gradeUtils";
@@ -29,13 +30,19 @@ const Dashboard = () => {
   const [selectedExamId, setSelectedExamId] = useState<string>("");
   const [exams, setExams] = useState<Exam[]>([]);
   const [studentRanking, setStudentRanking] = useState<StudentWithGrades[]>([]);
+  const [globalRanking, setGlobalRanking] = useState<StudentWithGrades[]>([]);
   const [examRanking, setExamRanking] = useState<ExamWithStats[]>([]);
+  const [rankingType, setRankingType] = useState<'exam' | 'global'>('exam');
 
   useEffect(() => {
     const loadData = () => {
       try {
         const availableExams = getExams();
         setExams(availableExams);
+        
+        // Load global student ranking
+        const globalRank = getGlobalStudentRanking();
+        setGlobalRanking(globalRank);
         
         // Set first exam as default if none selected and exams are available
         if (!selectedExamId && availableExams.length > 0) {
@@ -205,48 +212,99 @@ const Dashboard = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Classifica Studenti per questo esame</CardTitle>
-          <CardDescription>
-            Studenti ordinati per voto (più alto in cima)
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Classifiche Studenti</CardTitle>
+            <CardDescription>
+              Studenti ordinati per voto (più alto in cima)
+            </CardDescription>
+          </div>
+          <Tabs value={rankingType} onValueChange={(v) => setRankingType(v as 'exam' | 'global')} className="w-[300px]">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="exam">Per questo Esame</TabsTrigger>
+              <TabsTrigger value="global">Classifica Globale</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Posizione</TableHead>
-                  <TableHead>Matricola</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Cognome</TableHead>
-                  <TableHead className="text-right">Voto</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {studentRanking.map((student, index) => {
-                  const examGrade = student.grades.find(g => g.examId === selectedExamId);
-                  if (!examGrade) return null;
-                  
-                  return (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{index + 1}</TableCell>
-                      <TableCell>{student.matricola}</TableCell>
-                      <TableCell>{student.nome}</TableCell>
-                      <TableCell>{student.cognome}</TableCell>
-                      <TableCell className="text-right font-medium">{formatGrade(examGrade)}</TableCell>
-                    </TableRow>
-                  );
-                })}
-                {studentRanking.length === 0 && (
+            <TabsContent value="exam" className="mt-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      Nessun dato disponibile
-                    </TableCell>
+                    <TableHead>Posizione</TableHead>
+                    <TableHead>Matricola</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Cognome</TableHead>
+                    <TableHead className="text-right">Voto</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {studentRanking.map((student, index) => {
+                    const examGrade = student.grades.find(g => g.examId === selectedExamId);
+                    if (!examGrade) return null;
+                    
+                    return (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium">{index + 1}</TableCell>
+                        <TableCell>{student.matricola}</TableCell>
+                        <TableCell>{student.nome}</TableCell>
+                        <TableCell>{student.cognome}</TableCell>
+                        <TableCell className="text-right font-medium">{formatGrade(examGrade)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {studentRanking.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        Nessun dato disponibile
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
+            <TabsContent value="global" className="mt-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Posizione</TableHead>
+                    <TableHead>Matricola</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Cognome</TableHead>
+                    <TableHead className="text-right">Media</TableHead>
+                    <TableHead className="text-right">Num. Esami</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {globalRanking.map((student, index) => {
+                    const passingGrades = student.grades.filter(g => {
+                      if (g.votoLettera) return g.votoLettera !== 'F';
+                      if (g.votoNumerico !== undefined) return g.votoNumerico >= 18;
+                      return false;
+                    });
+                    
+                    return (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium">{index + 1}</TableCell>
+                        <TableCell>{student.matricola}</TableCell>
+                        <TableCell>{student.nome}</TableCell>
+                        <TableCell>{student.cognome}</TableCell>
+                        <TableCell className="text-right font-medium">{student.average?.toFixed(2) || "N/A"}</TableCell>
+                        <TableCell className="text-right">{passingGrades.length}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {globalRanking.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nessun dato disponibile
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
           </div>
         </CardContent>
       </Card>

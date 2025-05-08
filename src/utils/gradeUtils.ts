@@ -29,7 +29,7 @@ export const formatGrade = (grade: Grade): string => {
   if (grade.votoLettera) {
     return grade.votoLettera;
   }
-  if (grade.votoNumerico) {
+  if (grade.votoNumerico !== undefined) {
     return grade.conLode ? `${grade.votoNumerico}L` : grade.votoNumerico.toString();
   }
   return '';
@@ -40,7 +40,7 @@ export const isPassing = (grade: Grade): boolean => {
   if (grade.votoLettera) {
     return grade.votoLettera !== 'F';
   }
-  if (grade.votoNumerico) {
+  if (grade.votoNumerico !== undefined) {
     return grade.votoNumerico >= 18;
   }
   return false;
@@ -59,7 +59,8 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
   }
   
   let totalScore = 0;
-  let passing = 0;
+  let passingCount = 0;
+  let passingGrades: Grade[] = [];
   let failing = 0;
   const distribution: Record<string, number> = {};
   
@@ -67,20 +68,23 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
     // Calculate numeric value for average
     let numericValue = 0;
     let gradeKey = '';
+    let isPassed = false;
     
     if (grade.votoLettera) {
       numericValue = letterToNumeric(grade.votoLettera);
       gradeKey = grade.votoLettera;
-    } else if (grade.votoNumerico) {
+      isPassed = grade.votoLettera !== 'F';
+    } else if (grade.votoNumerico !== undefined) {
       numericValue = grade.votoNumerico;
       gradeKey = grade.conLode ? `${grade.votoNumerico}L` : grade.votoNumerico.toString();
+      isPassed = grade.votoNumerico >= 18;
     }
     
-    totalScore += numericValue;
-    
-    // Count passing/failing
-    if (isPassing(grade)) {
-      passing++;
+    // Count passing/failing and only include passing grades in average
+    if (isPassed) {
+      totalScore += numericValue;
+      passingCount++;
+      passingGrades.push(grade);
     } else {
       failing++;
     }
@@ -89,11 +93,14 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
     distribution[gradeKey] = (distribution[gradeKey] || 0) + 1;
   });
   
+  // Calculate average only from passing grades
+  const average = passingCount > 0 ? parseFloat((totalScore / passingCount).toFixed(2)) : 0;
+  
   return {
-    average: parseFloat((totalScore / grades.length).toFixed(2)),
-    passing,
+    average,
+    passing: passingCount,
     failing,
-    passingPercentage: parseFloat(((passing / grades.length) * 100).toFixed(2)),
+    passingPercentage: grades.length > 0 ? parseFloat(((passingCount / grades.length) * 100).toFixed(2)) : 0,
     distribution
   };
 };
@@ -133,16 +140,22 @@ export const getStudentAverage = (matricola: string): number => {
   }
   
   let totalScore = 0;
+  let passingCount = 0;
   
   grades.forEach(grade => {
-    if (grade.votoLettera) {
-      totalScore += letterToNumeric(grade.votoLettera);
-    } else if (grade.votoNumerico) {
-      totalScore += grade.votoNumerico;
+    // Only include passing grades in the average
+    if (isPassing(grade)) {
+      if (grade.votoLettera) {
+        totalScore += letterToNumeric(grade.votoLettera);
+        passingCount++;
+      } else if (grade.votoNumerico !== undefined && grade.votoNumerico >= 18) {
+        totalScore += grade.votoNumerico;
+        passingCount++;
+      }
     }
   });
   
-  return parseFloat((totalScore / grades.length).toFixed(2));
+  return passingCount > 0 ? parseFloat((totalScore / passingCount).toFixed(2)) : 0;
 };
 
 // Get unique matricole with grades, regardless of being registered
@@ -198,18 +211,22 @@ export const getStudentRanking = (): StudentWithGrades[] => {
   // Calculate average for each student and sort
   return studentsWithGrades
     .map(student => {
-      // Calculate student average
+      // Calculate student average (only passing grades)
       let totalScore = 0;
+      let passingCount = 0;
+      
       student.grades.forEach(grade => {
-        if (grade.votoLettera) {
+        if (grade.votoLettera && grade.votoLettera !== 'F') {
           totalScore += letterToNumeric(grade.votoLettera);
-        } else if (grade.votoNumerico) {
+          passingCount++;
+        } else if (grade.votoNumerico !== undefined && grade.votoNumerico >= 18) {
           totalScore += grade.votoNumerico;
+          passingCount++;
         }
       });
       
-      const average = student.grades.length > 0 ? 
-        parseFloat((totalScore / student.grades.length).toFixed(2)) : 0;
+      const average = passingCount > 0 ? 
+        parseFloat((totalScore / passingCount).toFixed(2)) : 0;
       
       return {
         ...student,
@@ -280,4 +297,9 @@ export const getDashboardAnalytics = (examId?: string) => {
     },
     overallStats
   };
+};
+
+// Get global student ranking across all exams
+export const getGlobalStudentRanking = (): StudentWithGrades[] => {
+  return getStudentRanking();
 };
