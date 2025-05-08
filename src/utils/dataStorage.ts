@@ -1,4 +1,3 @@
-
 import { Student, Exam, Grade, ExamType, LetterGrade } from "@/types";
 
 // Local storage keys
@@ -423,4 +422,15 @@ export const initializeSampleData = () => {
       });
     }
   }
+};
+
+// Add stubs for CourseForm.tsx
+export const addCourse = (course: any) => {
+  console.warn("addCourse is not implemented");
+  return null;
+};
+
+export const updateCourse = (course: any) => {
+  console.warn("updateCourse is not implemented");
+  return null;
 };

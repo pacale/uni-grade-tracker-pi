@@ -74,6 +74,13 @@ const Dashboard = () => {
     loadData();
   }, [selectedExamId]);
 
+  // Add a debug log to check if student rankings data is being loaded correctly
+  useEffect(() => {
+    console.log("Student rankings:", studentRanking);
+    console.log("Global rankings:", globalRanking);
+    console.log("Selected exam ID:", selectedExamId);
+  }, [studentRanking, globalRanking, selectedExamId]);
+
   const prepareDistributionData = () => {
     if (!analytics?.overallStats?.distribution) return [];
     
@@ -311,7 +318,7 @@ const Dashboard = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Classifica Esami</CardTitle>
+          <CardTitle>Statistiche Esami</CardTitle>
           <CardDescription>
             Esami ordinati per media voti (più alta in cima)
           </CardDescription>

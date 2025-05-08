@@ -1,4 +1,3 @@
-
 export type Student = {
   id: string;
   matricola: string;
@@ -44,3 +43,10 @@ export type GradeStats = {
   passingPercentage: number;
   distribution: Record<string, number>; // key is grade value (A, B, 18, 19, etc.)
 };
+
+// Add this stub type to fix CourseForm imports
+export interface Course {
+  id: string;
+  nome: string;
+  // Add other properties as needed
+}
