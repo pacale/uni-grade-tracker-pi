@@ -1,3 +1,4 @@
+
 export type Student = {
   id: string;
   matricola: string;
@@ -44,9 +45,10 @@ export type GradeStats = {
   distribution: Record<string, number>; // key is grade value (A, B, 18, 19, etc.)
 };
 
-// Add this stub type to fix CourseForm imports
+// Add this type to fix CourseForm imports
 export interface Course {
   id: string;
   nome: string;
-  // Add other properties as needed
+  useLetterGrades: boolean;
+  // Add other properties to match CourseForm requirements
 }

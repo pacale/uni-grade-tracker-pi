@@ -40,7 +40,7 @@ const Dashboard = () => {
         const availableExams = getExams();
         setExams(availableExams);
         
-        // Load global student ranking
+        // Load global student ranking independently of selected exam
         const globalRank = getGlobalStudentRanking();
         setGlobalRanking(globalRank);
         
@@ -56,9 +56,11 @@ const Dashboard = () => {
           
           // Load student ranking for the selected exam
           const ranking = getStudentRanking();
-          setStudentRanking(ranking.filter(student => 
+          // Filter students who have grades for this exam
+          const examStudents = ranking.filter(student => 
             student.grades.some(grade => grade.examId === selectedExamId)
-          ));
+          );
+          setStudentRanking(examStudents);
           
           // Load exam ranking
           const examRank = getExamRanking();
@@ -260,8 +262,8 @@ const Dashboard = () => {
                         <TableCell className="text-right font-medium">{formatGrade(examGrade)}</TableCell>
                       </TableRow>
                     );
-                  })}
-                  {studentRanking.length === 0 && (
+                  }).filter(Boolean)}
+                  {studentRanking.filter(s => s.grades.some(g => g.examId === selectedExamId)).length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                         Nessun dato disponibile
