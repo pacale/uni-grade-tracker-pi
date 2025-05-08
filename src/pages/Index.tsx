@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { toast } from "sonner";
 import Dashboard from "@/components/Dashboard";
 import StudentTable from "@/components/StudentTable";
 import GradeEntry from "@/components/GradeEntry";
+import ExamStats from "@/components/ExamStats";
 import { Student, Exam, ExamType } from "@/types";
 import { addStudent, getStudentWithGrades, importStudentsFromCSV, initializeSampleData, updateStudent, getExams, addExam, deleteExam, updateExam } from "@/utils/dataStorage";
 import { formatGrade } from "@/utils/gradeUtils";
@@ -290,6 +292,9 @@ const Index = () => {
               ))
             )}
           </div>
+          
+          {/* Add Exam Statistics section */}
+          <ExamStats />
         </TabsContent>
         
         <TabsContent value="grades" className="space-y-4">

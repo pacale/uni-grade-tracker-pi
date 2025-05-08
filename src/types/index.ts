@@ -50,5 +50,7 @@ export interface Course {
   id: string;
   nome: string;
   useLetterGrades: boolean;
-  // Add other properties to match CourseForm requirements
+  // All required fields for CourseForm
+  data: string;
+  tipo: ExamType;
 }

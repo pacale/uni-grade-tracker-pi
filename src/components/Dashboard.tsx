@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getDashboardAnalytics, getStudentRanking, getExamRanking, getGlobalStudentRanking } from "@/utils/gradeUtils";
+import { getDashboardAnalytics, getStudentRanking, getGlobalStudentRanking } from "@/utils/gradeUtils";
 import {
   Select,
   SelectContent,
@@ -12,12 +12,11 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getExams } from "@/utils/dataStorage";
-import { Exam, StudentWithGrades, ExamWithStats } from "@/types";
+import { Exam, StudentWithGrades } from "@/types";
 import { formatGrade } from "@/utils/gradeUtils";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -31,7 +30,6 @@ const Dashboard = () => {
   const [exams, setExams] = useState<Exam[]>([]);
   const [studentRanking, setStudentRanking] = useState<StudentWithGrades[]>([]);
   const [globalRanking, setGlobalRanking] = useState<StudentWithGrades[]>([]);
-  const [examRanking, setExamRanking] = useState<ExamWithStats[]>([]);
   const [rankingType, setRankingType] = useState<'exam' | 'global'>('exam');
 
   useEffect(() => {
@@ -43,6 +41,7 @@ const Dashboard = () => {
         // Load global student ranking independently of selected exam
         const globalRank = getGlobalStudentRanking();
         setGlobalRanking(globalRank);
+        console.log("Global ranking loaded:", globalRank);
         
         // Set first exam as default if none selected and exams are available
         if (!selectedExamId && availableExams.length > 0) {
@@ -54,17 +53,16 @@ const Dashboard = () => {
           const data = getDashboardAnalytics(selectedExamId);
           setAnalytics(data);
           
-          // Load student ranking for the selected exam
+          // Load student ranking and explicitly filter for this exam
           const ranking = getStudentRanking();
+          console.log("All student ranking:", ranking);
+          
           // Filter students who have grades for this exam
           const examStudents = ranking.filter(student => 
             student.grades.some(grade => grade.examId === selectedExamId)
           );
+          console.log("Filtered student ranking for exam", selectedExamId, ":", examStudents);
           setStudentRanking(examStudents);
-          
-          // Load exam ranking
-          const examRank = getExamRanking();
-          setExamRanking(examRank);
         }
       } catch (error) {
         console.error("Error loading analytics:", error);
@@ -78,10 +76,11 @@ const Dashboard = () => {
 
   // Add a debug log to check if student rankings data is being loaded correctly
   useEffect(() => {
-    console.log("Student rankings:", studentRanking);
-    console.log("Global rankings:", globalRanking);
+    console.log("Student rankings state:", studentRanking);
+    console.log("Global rankings state:", globalRanking);
     console.log("Selected exam ID:", selectedExamId);
-  }, [studentRanking, globalRanking, selectedExamId]);
+    console.log("Current ranking type:", rankingType);
+  }, [studentRanking, globalRanking, selectedExamId, rankingType]);
 
   const prepareDistributionData = () => {
     if (!analytics?.overallStats?.distribution) return [];
@@ -314,50 +313,6 @@ const Dashboard = () => {
                 </TableBody>
               </Table>
             </TabsContent>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Statistiche Esami</CardTitle>
-          <CardDescription>
-            Esami ordinati per media voti (più alta in cima)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Posizione</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead className="text-right">Media</TableHead>
-                  <TableHead className="text-right">Studenti</TableHead>
-                  <TableHead className="text-right">% Approvazione</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {examRanking.map((exam, index) => (
-                  <TableRow key={exam.id} className={exam.id === selectedExamId ? "bg-muted" : undefined}>
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell>{exam.nome}</TableCell>
-                    <TableCell>{new Date(exam.data).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right font-medium">{exam.stats.average}</TableCell>
-                    <TableCell className="text-right">{exam.studentCount}</TableCell>
-                    <TableCell className="text-right">{exam.stats.passingPercentage}%</TableCell>
-                  </TableRow>
-                ))}
-                {examRanking.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nessun dato disponibile
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
           </div>
         </CardContent>
       </Card>
