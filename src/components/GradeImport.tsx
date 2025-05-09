@@ -134,7 +134,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             placeholder={
               selectedExam?.useLetterGrades
                 ? "matricola,voto\n0612710900,A\n0612710901,B"
-                : "matricola,voto,lode\n0612710900,30,true\n0612710901,28,false"
+                : "matricola,voto\n0612710900,30\n0612710901,28"
             }
             value={csvData}
             onChange={(e) => setCsvData(e.target.value)}
@@ -150,8 +150,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
             ) : (
               <ul className="list-disc pl-5 space-y-1">
                 <li><code>matricola</code>: La matricola dello studente (obbligatorio)</li>
-                <li><code>voto</code>: Voto numerico da 18 a 30 (obbligatorio)</li>
-                <li><code>lode</code>: true/false se il voto è con lode (opzionale)</li>
+                <li><code>voto</code>: Voto numerico da 0 a 30 (obbligatorio)</li>
               </ul>
             )}
           </div>

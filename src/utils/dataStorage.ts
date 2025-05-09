@@ -161,8 +161,8 @@ const validateGrade = (grade: Grade, allowNonRegisteredStudents: boolean = false
     if (!grade.votoLettera) {
       throw new Error("Letter grade is required for exams with letter grades");
     }
-    if (grade.votoNumerico !== undefined || grade.conLode !== undefined) {
-      throw new Error("Numeric grade and lode are not applicable for exams with letter grades");
+    if (grade.votoNumerico !== undefined) {
+      throw new Error("Numeric grade is not applicable for exams with letter grades");
     }
   }
   
@@ -174,7 +174,7 @@ const validateGrade = (grade: Grade, allowNonRegisteredStudents: boolean = false
     if (grade.votoLettera !== undefined) {
       throw new Error("Letter grade is not applicable for exams with numeric grades");
     }
-    // Modified: Allow any numeric grade from 0 to 30
+    // Allow any numeric grade from 0 to 30
     if (grade.votoNumerico !== undefined && (grade.votoNumerico < 0 || grade.votoNumerico > 30)) {
       throw new Error("Numeric grade must be between 0 and 30");
     }
@@ -327,28 +327,16 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
         // For numeric grades
         const votoNumerico = parseInt(columns[1]);
         
-        if (isNaN(votoNumerico) || votoNumerico < 18 || votoNumerico > 30) {
+        if (isNaN(votoNumerico) || votoNumerico < 0 || votoNumerico > 30) {
           errors++;
           console.error(`Riga ${i+1}: voto numerico non valido (${columns[1]}) per lo studente ${matricola}`);
-          continue;
-        }
-        
-        // Check for lode (optional)
-        const conLode = columns.length > 2 ? 
-          columns[2].toLowerCase() === 'true' || columns[2] === '1' : false;
-        
-        // Only allow lode with 30
-        if (conLode && votoNumerico !== 30) {
-          errors++;
-          console.error(`Riga ${i+1}: lode non può essere assegnata con voto diverso da 30 per lo studente ${matricola}`);
           continue;
         }
         
         addGrade({
           matricola,
           examId: exam.id,
-          votoNumerico,
-          conLode
+          votoNumerico
         });
       }
       

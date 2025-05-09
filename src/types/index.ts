@@ -23,8 +23,7 @@ export type Grade = {
   matricola: string;
   examId: string;
   votoLettera?: LetterGrade;
-  votoNumerico?: number; // 18-30
-  conLode?: boolean;
+  votoNumerico?: number; // 0-30
 };
 
 export type StudentWithGrades = Student & {

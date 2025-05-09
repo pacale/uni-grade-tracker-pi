@@ -181,6 +181,7 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
   console.log("Unique matricole:", matricole.length);
   console.log("Registered students:", students.length);
   console.log("Total grades:", grades.length);
+  console.log("Filtering by exam ID:", examId || "all exams");
   
   const studentsWithGrades: StudentWithGrades[] = [];
   
@@ -202,12 +203,13 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
     // Convert to StudentWithGrades format
     const gradesWithExams = studentGrades.map(grade => {
       const exam = exams.find(e => e.id === grade.examId);
+      if (!exam) return null;
       
       return {
         ...grade,
-        exam: exam!
+        exam
       };
-    }).filter(g => g.exam); // Filter out any incomplete relations
+    }).filter(Boolean) as (Grade & { exam: Exam })[];
     
     // Create StudentWithGrades object
     const studentWithGrades: StudentWithGrades = {
@@ -226,28 +228,47 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
   // Calculate average for each student and sort
   return studentsWithGrades
     .map(student => {
-      // Calculate student average (only passing grades)
-      let totalScore = 0;
-      let passingCount = 0;
-      
-      student.grades.forEach(grade => {
-        // Only include passing grades (18 or above) in the average calculation
-        if (grade.votoLettera && grade.votoLettera !== 'F') {
-          totalScore += letterToNumeric(grade.votoLettera);
-          passingCount++;
-        } else if (grade.votoNumerico !== undefined && grade.votoNumerico >= 18) {
-          totalScore += grade.votoNumerico;
-          passingCount++;
+      if (examId) {
+        // For single exam, sort by the actual grade (not average)
+        const singleExamGrade = student.grades.find(g => g.examId === examId);
+        let gradeValue = 0;
+        
+        if (singleExamGrade) {
+          if (singleExamGrade.votoLettera) {
+            gradeValue = letterToNumeric(singleExamGrade.votoLettera);
+          } else if (singleExamGrade.votoNumerico !== undefined) {
+            gradeValue = singleExamGrade.votoNumerico;
+          }
         }
-      });
-      
-      const average = passingCount > 0 ? 
-        parseFloat((totalScore / passingCount).toFixed(2)) : 0;
-      
-      return {
-        ...student,
-        average
-      };
+        
+        return {
+          ...student,
+          average: gradeValue
+        };
+      } else {
+        // For all exams, calculate average (only passing grades)
+        let totalScore = 0;
+        let passingCount = 0;
+        
+        student.grades.forEach(grade => {
+          // Only include passing grades (18 or above) in the average calculation
+          if (grade.votoLettera && grade.votoLettera !== 'F') {
+            totalScore += letterToNumeric(grade.votoLettera);
+            passingCount++;
+          } else if (grade.votoNumerico !== undefined && grade.votoNumerico >= 18) {
+            totalScore += grade.votoNumerico;
+            passingCount++;
+          }
+        });
+        
+        const average = passingCount > 0 ? 
+          parseFloat((totalScore / passingCount).toFixed(2)) : 0;
+        
+        return {
+          ...student,
+          average
+        };
+      }
     })
     .sort((a, b) => (b.average || 0) - (a.average || 0)); // Sort by average (highest first)
 };
