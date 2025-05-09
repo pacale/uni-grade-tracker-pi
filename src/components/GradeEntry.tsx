@@ -93,7 +93,6 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
   const { watch, setValue } = form;
   
   const watchExamId = watch('examId');
-  const watchNumericGrade = watch('numericGrade');
   
   useEffect(() => {
     // Load data
@@ -136,7 +135,6 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
         gradeData.votoLettera = data.letterGrade as LetterGrade;
       } else {
         gradeData.votoNumerico = data.numericGrade;
-        // Removed lode option
       }
       
       // Validate grade data
@@ -279,30 +277,28 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
                 )}
               />
             ) : (
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="numericGrade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Voto (numerico)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min={0} 
-                          max={30} 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)} 
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        I voti sotto il 18 saranno conteggiati come insufficienti, non inclusi nella media
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="numericGrade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Voto (numerico)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={0} 
+                        max={30} 
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      I voti sotto il 18 saranno conteggiati come insufficienti, non inclusi nella media
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
           </div>
           

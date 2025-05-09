@@ -1,3 +1,4 @@
+
 import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades, ExamWithStats } from "@/types";
 import { getExams, getGrades, getStudents } from "./dataStorage";
 
@@ -30,7 +31,7 @@ export const formatGrade = (grade: Grade): string => {
     return grade.votoLettera;
   }
   if (grade.votoNumerico !== undefined) {
-    return grade.conLode ? `${grade.votoNumerico}L` : grade.votoNumerico.toString();
+    return grade.votoNumerico.toString();
   }
   return '';
 };
@@ -60,7 +61,6 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
   
   let totalScore = 0;
   let passingCount = 0;
-  let passingGrades: Grade[] = [];
   let failing = 0;
   const distribution: Record<string, number> = {};
   
@@ -76,8 +76,8 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
       isPassed = grade.votoLettera !== 'F';
     } else if (grade.votoNumerico !== undefined) {
       numericValue = grade.votoNumerico;
-      gradeKey = grade.conLode ? `${grade.votoNumerico}L` : grade.votoNumerico.toString();
-      // Updated: Only grades >= 18 are considered passing
+      gradeKey = grade.votoNumerico.toString();
+      // Only grades >= 18 are considered passing
       isPassed = grade.votoNumerico >= 18;
     }
     
@@ -85,7 +85,6 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
     if (isPassed) {
       totalScore += numericValue;
       passingCount++;
-      passingGrades.push(grade);
     } else {
       failing++;
     }
@@ -172,7 +171,7 @@ export const getUniqueMatricoleWithGrades = (): string[] => {
 };
 
 // Get student ranking based on average grades
-export const getStudentRanking = (): StudentWithGrades[] => {
+export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
   const matricole = getUniqueMatricoleWithGrades();
   const students = getStudents();
   const exams = getExams();
@@ -190,12 +189,20 @@ export const getStudentRanking = (): StudentWithGrades[] => {
     // Find the student if registered
     const registeredStudent = students.find(s => s.matricola === matricola);
     
-    // Get all grades for this student
-    const studentGrades = grades.filter(g => g.matricola === matricola);
+    // Get grades for this student, filtered by examId if provided
+    const studentGrades = examId 
+      ? grades.filter(g => g.matricola === matricola && g.examId === examId)
+      : grades.filter(g => g.matricola === matricola);
+    
+    // Skip if no grades for this student (when filtered by examId)
+    if (examId && studentGrades.length === 0) {
+      return;
+    }
     
     // Convert to StudentWithGrades format
     const gradesWithExams = studentGrades.map(grade => {
       const exam = exams.find(e => e.id === grade.examId);
+      
       return {
         ...grade,
         exam: exam!

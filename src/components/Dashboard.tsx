@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getDashboardAnalytics, getStudentRanking, getGlobalStudentRanking } from "@/utils/gradeUtils";
+import { getDashboardAnalytics, getStudentRanking } from "@/utils/gradeUtils";
 import {
   Select,
   SelectContent,
@@ -29,19 +29,13 @@ const Dashboard = () => {
   const [selectedExamId, setSelectedExamId] = useState<string>("");
   const [exams, setExams] = useState<Exam[]>([]);
   const [studentRanking, setStudentRanking] = useState<StudentWithGrades[]>([]);
-  const [globalRanking, setGlobalRanking] = useState<StudentWithGrades[]>([]);
-  const [rankingType, setRankingType] = useState<'exam' | 'global'>('exam');
+  const [rankingType, setRankingType] = useState<'exam' | 'all'>('all');
 
   useEffect(() => {
     const loadData = () => {
       try {
         const availableExams = getExams();
         setExams(availableExams);
-        
-        // Load global student ranking independently of selected exam
-        const globalRank = getGlobalStudentRanking();
-        setGlobalRanking(globalRank);
-        console.log("Global ranking loaded:", globalRank);
         
         // Set first exam as default if none selected and exams are available
         if (!selectedExamId && availableExams.length > 0) {
@@ -52,18 +46,11 @@ const Dashboard = () => {
         if (selectedExamId) {
           const data = getDashboardAnalytics(selectedExamId);
           setAnalytics(data);
-          
-          // Load student ranking and explicitly filter for this exam
-          const ranking = getStudentRanking();
-          console.log("All student ranking:", ranking);
-          
-          // Filter students who have grades for this exam
-          const examStudents = ranking.filter(student => 
-            student.grades.some(grade => grade.examId === selectedExamId)
-          );
-          console.log("Filtered student ranking for exam", selectedExamId, ":", examStudents);
-          setStudentRanking(examStudents);
+          console.log("Analytics loaded for exam:", selectedExamId);
         }
+        
+        // Load student ranking
+        loadStudentRanking();
       } catch (error) {
         console.error("Error loading analytics:", error);
       } finally {
@@ -74,13 +61,32 @@ const Dashboard = () => {
     loadData();
   }, [selectedExamId]);
 
+  // Separate function to load student ranking based on current rankingType
+  const loadStudentRanking = () => {
+    try {
+      // Either filter by exam or get all students
+      const ranking = rankingType === 'exam' && selectedExamId 
+        ? getStudentRanking(selectedExamId) 
+        : getStudentRanking();
+      
+      console.log(`Loaded student ranking (${rankingType}):`, ranking.length);
+      setStudentRanking(ranking);
+    } catch (error) {
+      console.error("Error loading student ranking:", error);
+    }
+  };
+
+  // Update rankings when ranking type changes
+  useEffect(() => {
+    loadStudentRanking();
+  }, [rankingType, selectedExamId]);
+
   // Add a debug log to check if student rankings data is being loaded correctly
   useEffect(() => {
-    console.log("Student rankings state:", studentRanking);
-    console.log("Global rankings state:", globalRanking);
+    console.log("Student rankings state:", studentRanking.length);
     console.log("Selected exam ID:", selectedExamId);
     console.log("Current ranking type:", rankingType);
-  }, [studentRanking, globalRanking, selectedExamId, rankingType]);
+  }, [studentRanking, selectedExamId, rankingType]);
 
   const prepareDistributionData = () => {
     if (!analytics?.overallStats?.distribution) return [];
@@ -227,10 +233,10 @@ const Dashboard = () => {
               Studenti ordinati per voto (più alto in cima)
             </CardDescription>
           </div>
-          <Tabs value={rankingType} onValueChange={(v) => setRankingType(v as 'exam' | 'global')} className="w-[300px]">
+          <Tabs value={rankingType} onValueChange={(v) => setRankingType(v as 'exam' | 'all')} className="w-[300px]">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="exam">Per questo Esame</TabsTrigger>
-              <TabsTrigger value="global">Classifica Globale</TabsTrigger>
+              <TabsTrigger value="all">Tutti gli Esami</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -248,21 +254,23 @@ const Dashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {studentRanking.map((student, index) => {
-                    const examGrade = student.grades.find(g => g.examId === selectedExamId);
-                    if (!examGrade) return null;
-                    
-                    return (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{index + 1}</TableCell>
-                        <TableCell>{student.matricola}</TableCell>
-                        <TableCell>{student.nome}</TableCell>
-                        <TableCell>{student.cognome}</TableCell>
-                        <TableCell className="text-right font-medium">{formatGrade(examGrade)}</TableCell>
-                      </TableRow>
-                    );
-                  }).filter(Boolean)}
-                  {studentRanking.filter(s => s.grades.some(g => g.examId === selectedExamId)).length === 0 && (
+                  {studentRanking.length > 0 ? (
+                    studentRanking.map((student, index) => {
+                      const examGrade = student.grades.find(g => g.examId === selectedExamId);
+                      
+                      if (!examGrade) return null;
+                      
+                      return (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell>{student.matricola}</TableCell>
+                          <TableCell>{student.nome}</TableCell>
+                          <TableCell>{student.cognome}</TableCell>
+                          <TableCell className="text-right font-medium">{formatGrade(examGrade)}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                         Nessun dato disponibile
@@ -272,7 +280,7 @@ const Dashboard = () => {
                 </TableBody>
               </Table>
             </TabsContent>
-            <TabsContent value="global" className="mt-0">
+            <TabsContent value="all" className="mt-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -285,25 +293,26 @@ const Dashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {globalRanking.map((student, index) => {
-                    const passingGrades = student.grades.filter(g => {
-                      if (g.votoLettera) return g.votoLettera !== 'F';
-                      if (g.votoNumerico !== undefined) return g.votoNumerico >= 18;
-                      return false;
-                    });
-                    
-                    return (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{index + 1}</TableCell>
-                        <TableCell>{student.matricola}</TableCell>
-                        <TableCell>{student.nome}</TableCell>
-                        <TableCell>{student.cognome}</TableCell>
-                        <TableCell className="text-right font-medium">{student.average?.toFixed(2) || "N/A"}</TableCell>
-                        <TableCell className="text-right">{passingGrades.length}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {globalRanking.length === 0 && (
+                  {studentRanking.length > 0 ? (
+                    studentRanking.map((student, index) => {
+                      const passingGrades = student.grades.filter(g => {
+                        if (g.votoLettera) return g.votoLettera !== 'F';
+                        if (g.votoNumerico !== undefined) return g.votoNumerico >= 18;
+                        return false;
+                      });
+                      
+                      return (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell>{student.matricola}</TableCell>
+                          <TableCell>{student.nome}</TableCell>
+                          <TableCell>{student.cognome}</TableCell>
+                          <TableCell className="text-right font-medium">{student.average?.toFixed(2) || "N/A"}</TableCell>
+                          <TableCell className="text-right">{passingGrades.length}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         Nessun dato disponibile
