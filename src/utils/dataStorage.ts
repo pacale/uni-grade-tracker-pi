@@ -174,8 +174,9 @@ const validateGrade = (grade: Grade, allowNonRegisteredStudents: boolean = false
     if (grade.votoLettera !== undefined) {
       throw new Error("Letter grade is not applicable for exams with numeric grades");
     }
-    if (grade.votoNumerico !== undefined && (grade.votoNumerico < 18 || grade.votoNumerico > 30)) {
-      throw new Error("Numeric grade must be between 18 and 30");
+    // Modified: Allow any numeric grade from 0 to 30
+    if (grade.votoNumerico !== undefined && (grade.votoNumerico < 0 || grade.votoNumerico > 30)) {
+      throw new Error("Numeric grade must be between 0 and 30");
     }
   }
   

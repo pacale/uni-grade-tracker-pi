@@ -57,7 +57,6 @@ interface FormData {
   studentId: string;
   letterGrade?: string;
   numericGrade?: number;
-  conLode?: boolean;
 }
 
 const newExamFormSchema = z.object({
@@ -77,7 +76,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
   
   const form = useForm<FormData>({
     defaultValues: {
-      conLode: false
+      numericGrade: undefined
     }
   });
   
@@ -94,6 +93,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
   const { watch, setValue } = form;
   
   const watchExamId = watch('examId');
+  const watchNumericGrade = watch('numericGrade');
   
   useEffect(() => {
     // Load data
@@ -136,7 +136,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
         gradeData.votoLettera = data.letterGrade as LetterGrade;
       } else {
         gradeData.votoNumerico = data.numericGrade;
-        gradeData.conLode = data.conLode;
+        // Removed lode option
       }
       
       // Validate grade data
@@ -145,7 +145,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
         return;
       }
       
-      if (!selectedExam.useLetterGrades && !gradeData.votoNumerico) {
+      if (!selectedExam.useLetterGrades && gradeData.votoNumerico === undefined) {
         toast.error("Il voto numerico è obbligatorio");
         return;
       }
@@ -161,7 +161,15 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
 
   const handleAddExam = async (formData: NewExamFormData) => {
     try {
-      const newExam = addExam(formData);
+      // Fix: Ensure all required fields are present
+      const newExamData: Omit<Exam, "id"> = {
+        nome: formData.nome,
+        tipo: formData.tipo,
+        data: formData.data,
+        useLetterGrades: formData.useLetterGrades
+      };
+      
+      const newExam = addExam(newExamData);
       setExams(prev => [...prev, newExam]);
       setValue("examId", newExam.id);
       setShowNewExamDialog(false);
@@ -281,31 +289,15 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
                       <FormControl>
                         <Input 
                           type="number" 
-                          min={18} 
+                          min={0} 
                           max={30} 
                           {...field} 
                           onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)} 
                         />
                       </FormControl>
-                      <FormDescription>Il voto deve essere compreso tra 18 e 30</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="conLode"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox 
-                          checked={field.value} 
-                          onCheckedChange={field.onChange}
-                          disabled={form.watch('numericGrade') !== 30}
-                        />
-                      </FormControl>
-                      <FormLabel>Con lode</FormLabel>
+                      <FormDescription>
+                        I voti sotto il 18 saranno conteggiati come insufficienti, non inclusi nella media
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -405,7 +397,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
                     <div className="space-y-1 leading-none">
                       <FormLabel>Utilizza voti in lettere</FormLabel>
                       <FormDescription>
-                        Altrimenti verranno utilizzati voti numerici (18-30)
+                        Altrimenti verranno utilizzati voti numerici (0-30)
                       </FormDescription>
                     </div>
                   </FormItem>

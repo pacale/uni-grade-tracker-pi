@@ -1,4 +1,3 @@
-
 import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades, ExamWithStats } from "@/types";
 import { getExams, getGrades, getStudents } from "./dataStorage";
 
@@ -78,6 +77,7 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
     } else if (grade.votoNumerico !== undefined) {
       numericValue = grade.votoNumerico;
       gradeKey = grade.conLode ? `${grade.votoNumerico}L` : grade.votoNumerico.toString();
+      // Updated: Only grades >= 18 are considered passing
       isPassed = grade.votoNumerico >= 18;
     }
     
@@ -94,7 +94,7 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
     distribution[gradeKey] = (distribution[gradeKey] || 0) + 1;
   });
   
-  // Calculate average only from passing grades
+  // Calculate average only from passing grades (18 or above)
   const average = passingCount > 0 ? parseFloat((totalScore / passingCount).toFixed(2)) : 0;
   
   return {
@@ -144,15 +144,15 @@ export const getStudentAverage = (matricola: string): number => {
   let passingCount = 0;
   
   grades.forEach(grade => {
-    // Only include passing grades in the average
-    if (isPassing(grade)) {
-      if (grade.votoLettera) {
+    // Only include passing grades in the average (18 or above)
+    if (grade.votoLettera) {
+      if (grade.votoLettera !== 'F') {
         totalScore += letterToNumeric(grade.votoLettera);
         passingCount++;
-      } else if (grade.votoNumerico !== undefined && grade.votoNumerico >= 18) {
-        totalScore += grade.votoNumerico;
-        passingCount++;
       }
+    } else if (grade.votoNumerico !== undefined && grade.votoNumerico >= 18) {
+      totalScore += grade.votoNumerico;
+      passingCount++;
     }
   });
   
@@ -224,6 +224,7 @@ export const getStudentRanking = (): StudentWithGrades[] => {
       let passingCount = 0;
       
       student.grades.forEach(grade => {
+        // Only include passing grades (18 or above) in the average calculation
         if (grade.votoLettera && grade.votoLettera !== 'F') {
           totalScore += letterToNumeric(grade.votoLettera);
           passingCount++;
