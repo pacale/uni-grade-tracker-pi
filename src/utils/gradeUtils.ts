@@ -1,4 +1,3 @@
-
 import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades, ExamWithStats } from "@/types";
 import { getExams, getGrades, getStudents } from "./dataStorage";
 
@@ -177,12 +176,6 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
   const exams = getExams();
   const grades = getGrades();
   
-  console.log("Getting student ranking...");
-  console.log("Unique matricole:", matricole.length);
-  console.log("Registered students:", students.length);
-  console.log("Total grades:", grades.length);
-  console.log("Filtering by exam ID:", examId || "all exams");
-  
   const studentsWithGrades: StudentWithGrades[] = [];
   
   // Process each matricola (including those not in registered students)
@@ -222,8 +215,6 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
     
     studentsWithGrades.push(studentWithGrades);
   });
-  
-  console.log("Students with grades:", studentsWithGrades.length);
   
   // Calculate average for each student and sort
   return studentsWithGrades

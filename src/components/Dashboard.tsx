@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -45,7 +46,6 @@ const Dashboard = () => {
         if (selectedExamId) {
           const data = getDashboardAnalytics(selectedExamId);
           setAnalytics(data);
-          console.log("Analytics loaded for exam:", selectedExamId);
         }
         
         // Load student ranking
@@ -68,7 +68,6 @@ const Dashboard = () => {
         ? getStudentRanking(selectedExamId) 
         : getStudentRanking();
       
-      console.log(`Loaded student ranking (${rankingType}):`, ranking.length);
       setStudentRanking(ranking);
     } catch (error) {
       console.error("Error loading student ranking:", error);
@@ -80,21 +79,24 @@ const Dashboard = () => {
     loadStudentRanking();
   }, [rankingType, selectedExamId]);
 
-  // Add a debug log to check if student rankings data is being loaded correctly
-  useEffect(() => {
-    console.log("Student rankings state:", studentRanking.length);
-    console.log("Selected exam ID:", selectedExamId);
-    console.log("Current ranking type:", rankingType);
-  }, [studentRanking, selectedExamId, rankingType]);
-
   const prepareDistributionData = () => {
     if (!analytics?.overallStats?.distribution) return [];
     
     const distribution = analytics.overallStats.distribution;
-    return Object.keys(distribution).map(key => ({
+    const distributionData = Object.keys(distribution).map(key => ({
       grade: key,
       count: distribution[key]
     }));
+    
+    // Sort by grade value (highest to lowest)
+    return distributionData.sort((a, b) => {
+      // For letter grades (A, B, C, D, E, F)
+      if (isNaN(Number(a.grade)) && isNaN(Number(b.grade))) {
+        return a.grade.localeCompare(b.grade);
+      }
+      // For numeric grades (30, 29, 28, etc.)
+      return Number(b.grade) - Number(a.grade);
+    });
   };
 
   if (loading) {
@@ -223,107 +225,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Classifiche Studenti</CardTitle>
-            <CardDescription>
-              Studenti ordinati per voto (più alto in cima)
-            </CardDescription>
-          </div>
-          <Tabs value={rankingType} onValueChange={(v) => setRankingType(v as 'exam' | 'all')} className="w-[300px]">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="exam">Per questo Esame</TabsTrigger>
-              <TabsTrigger value="all">Tutti gli Esami</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-hidden">
-            <TabsContent value="exam" className="mt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Posizione</TableHead>
-                    <TableHead>Matricola</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Cognome</TableHead>
-                    <TableHead className="text-right">Voto</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentRanking.length > 0 ? (
-                    studentRanking.map((student, index) => {
-                      const examGrade = student.grades.find(g => g.examId === selectedExamId);
-                      
-                      if (!examGrade) return null;
-                      
-                      return (
-                        <TableRow key={student.id}>
-                          <TableCell className="font-medium">{index + 1}</TableCell>
-                          <TableCell>{student.matricola}</TableCell>
-                          <TableCell>{student.nome}</TableCell>
-                          <TableCell>{student.cognome}</TableCell>
-                          <TableCell className="text-right font-medium">{formatGrade(examGrade)}</TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        Nessun dato disponibile
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
-            <TabsContent value="all" className="mt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Posizione</TableHead>
-                    <TableHead>Matricola</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Cognome</TableHead>
-                    <TableHead className="text-right">Media</TableHead>
-                    <TableHead className="text-right">Num. Esami</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentRanking.length > 0 ? (
-                    studentRanking.map((student, index) => {
-                      const passingGrades = student.grades.filter(g => {
-                        if (g.votoLettera) return g.votoLettera !== 'F';
-                        if (g.votoNumerico !== undefined) return g.votoNumerico >= 18;
-                        return false;
-                      });
-                      
-                      return (
-                        <TableRow key={student.id}>
-                          <TableCell className="font-medium">{index + 1}</TableCell>
-                          <TableCell>{student.matricola}</TableCell>
-                          <TableCell>{student.nome}</TableCell>
-                          <TableCell>{student.cognome}</TableCell>
-                          <TableCell className="text-right font-medium">{student.average?.toFixed(2) || "N/A"}</TableCell>
-                          <TableCell className="text-right">{passingGrades.length}</TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nessun dato disponibile
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

@@ -397,13 +397,11 @@ export const initializeSampleData = () => {
               // Numeric grades
               const baseGrade = 18 + (index * 3);
               const grade = Math.min(baseGrade, 30);
-              const conLode = grade === 30 && index % 3 === 0;
               
               addGrade({
                 matricola: student.matricola,
                 examId: exam.id,
-                votoNumerico: grade,
-                conLode
+                votoNumerico: grade
               });
             }
           } catch(e) { /* ignore */ }
