@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -83,20 +82,48 @@ const Dashboard = () => {
     if (!analytics?.overallStats?.distribution) return [];
     
     const distribution = analytics.overallStats.distribution;
-    const distributionData = Object.keys(distribution).map(key => ({
-      grade: key,
-      count: distribution[key]
-    }));
+    const distributionData = Object.keys(distribution)
+      .map(key => {
+        // For numeric grades, filter out failing grades (< 18)
+        if (!isNaN(Number(key))) {
+          const gradeValue = Number(key);
+          // If the grade is numeric and below 18, mark as "Non sufficiente" (Failed)
+          if (gradeValue < 18) {
+            return { grade: "Non sufficiente", count: distribution[key], failing: true };
+          }
+          return { grade: key, count: distribution[key] };
+        }
+        // For letter grades, keep as is
+        return { grade: key, count: distribution[key], failing: key === 'F' };
+      })
+      // Group all failing grades together
+      .reduce((acc, item) => {
+        if (item.failing) {
+          const failingIndex = acc.findIndex(g => g.grade === "Non sufficiente");
+          if (failingIndex >= 0) {
+            acc[failingIndex].count += item.count;
+          } else {
+            acc.push({ grade: "Non sufficiente", count: item.count, failing: true });
+          }
+          return acc;
+        }
+        acc.push(item);
+        return acc;
+      }, [] as any[]);
     
     // Sort by grade value (highest to lowest)
-    return distributionData.sort((a, b) => {
-      // For letter grades (A, B, C, D, E, F)
-      if (isNaN(Number(a.grade)) && isNaN(Number(b.grade))) {
-        return a.grade.localeCompare(b.grade);
-      }
-      // For numeric grades (30, 29, 28, etc.)
-      return Number(b.grade) - Number(a.grade);
-    });
+    return distributionData
+      .filter(item => !item.failing) // Remove failing grades
+      .sort((a, b) => {
+        // For letter grades (A, B, C, D, E)
+        if (isNaN(Number(a.grade)) && isNaN(Number(b.grade))) {
+          return a.grade.localeCompare(b.grade);
+        }
+        // For numeric grades (30, 29, 28, etc.)
+        return Number(b.grade) - Number(a.grade);
+      })
+      // Add failing grades at the end
+      .concat(distributionData.filter(item => item.failing));
   };
 
   if (loading) {
@@ -219,12 +246,102 @@ const Dashboard = () => {
                 <XAxis dataKey="grade" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="count" name="Numero di voti" fill="#1a75ff" />
+                <Bar 
+                  dataKey="count" 
+                  name="Numero di voti" 
+                  fill={(data) => data.failing ? "#ef4444" : "#1a75ff"} 
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
+
+      {/* Student Ranking Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Classifica Studenti</CardTitle>
+          <CardDescription>
+            Studenti ordinati per media voti (dal più alto al più basso)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="all" onValueChange={(value) => setRankingType(value as 'all' | 'exam')}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">Tutti gli esami</TabsTrigger>
+              <TabsTrigger value="exam">Esame selezionato</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all">
+              <div className="rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Posizione</TableHead>
+                      <TableHead>Matricola</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Cognome</TableHead>
+                      <TableHead className="text-right">Media</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentRanking.length > 0 ? (
+                      studentRanking.map((student, index) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell>{student.matricola}</TableCell>
+                          <TableCell>{student.nome}</TableCell>
+                          <TableCell>{student.cognome}</TableCell>
+                          <TableCell className="text-right font-medium">{student.average}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          Nessun dato disponibile
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+            <TabsContent value="exam">
+              <div className="rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Posizione</TableHead>
+                      <TableHead>Matricola</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Cognome</TableHead>
+                      <TableHead className="text-right">Voto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentRanking.length > 0 ? (
+                      studentRanking.map((student, index) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell>{student.matricola}</TableCell>
+                          <TableCell>{student.nome}</TableCell>
+                          <TableCell>{student.cognome}</TableCell>
+                          <TableCell className="text-right font-medium">{student.average}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          Nessun dato disponibile per questo esame
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };
