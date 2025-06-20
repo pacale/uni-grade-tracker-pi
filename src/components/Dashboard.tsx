@@ -249,7 +249,7 @@ const Dashboard = () => {
                 <Bar 
                   dataKey="count" 
                   name="Numero di voti" 
-                  fill={(data) => data.failing ? "#ef4444" : "#1a75ff"} 
+                  fill="#1a75ff"
                 />
               </BarChart>
             </ResponsiveContainer>
