@@ -49,7 +49,6 @@ const AuthForm = () => {
       email: signupEmail,
       password: signupPassword,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
         data: {
           nome,
           cognome,
@@ -61,7 +60,7 @@ const AuthForm = () => {
     if (error) {
       setError(error.message);
     } else {
-      setSuccess("Account creato con successo! Controlla la tua email per confermare l'account.");
+      setSuccess("Account creato con successo! Puoi ora effettuare il login.");
     }
     setLoading(false);
   };
