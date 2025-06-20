@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { initializeSampleData } from "@/utils/dataStorage";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,9 +17,21 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Initialize sample data if needed
-  React.useEffect(() => {
+  useEffect(() => {
     initializeSampleData();
   }, []);
+
+  const handleStudentEdit = (studentId: string) => {
+    console.log('Edit student:', studentId);
+  };
+
+  const handleStudentView = (studentId: string) => {
+    console.log('View student:', studentId);
+  };
+
+  const handleFormComplete = () => {
+    console.log('Form completed');
+  };
 
   return (
     <ProtectedRoute>
@@ -57,25 +69,25 @@ const Index = () => {
                   <>
                     <TabsContent value="students" className="m-0">
                       <ProtectedRoute requireAdmin>
-                        <StudentTable />
+                        <StudentTable onEdit={handleStudentEdit} onView={handleStudentView} />
                       </ProtectedRoute>
                     </TabsContent>
 
                     <TabsContent value="courses" className="m-0">
                       <ProtectedRoute requireAdmin>
-                        <CourseForm />
+                        <CourseForm onComplete={handleFormComplete} />
                       </ProtectedRoute>
                     </TabsContent>
 
                     <TabsContent value="grades" className="m-0">
                       <ProtectedRoute requireAdmin>
-                        <GradeEntry />
+                        <GradeEntry onComplete={handleFormComplete} />
                       </ProtectedRoute>
                     </TabsContent>
 
                     <TabsContent value="import" className="m-0">
                       <ProtectedRoute requireAdmin>
-                        <GradeImport />
+                        <GradeImport onComplete={handleFormComplete} />
                       </ProtectedRoute>
                     </TabsContent>
 

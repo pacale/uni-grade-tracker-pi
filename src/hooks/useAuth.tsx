@@ -41,7 +41,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return null;
       }
 
-      return data;
+      // Ensure role is properly typed
+      const typedProfile: Profile = {
+        ...data,
+        role: (data.role === 'admin' ? 'admin' : 'user') as 'user' | 'admin'
+      };
+
+      return typedProfile;
     } catch (error) {
       console.error('Error in fetchProfile:', error);
       return null;
