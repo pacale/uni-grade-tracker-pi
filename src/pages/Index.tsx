@@ -21,12 +21,12 @@ const Index = () => {
     initializeSampleData();
   }, []);
 
-  const handleStudentEdit = (studentId: string) => {
-    console.log('Edit student:', studentId);
+  const handleStudentEdit = (student: any) => {
+    console.log('Edit student:', student);
   };
 
-  const handleStudentView = (studentId: string) => {
-    console.log('View student:', studentId);
+  const handleStudentView = (student: any) => {
+    console.log('View student:', student);
   };
 
   const handleFormComplete = () => {

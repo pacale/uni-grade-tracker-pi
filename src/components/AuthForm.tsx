@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AuthForm = () => {
@@ -23,7 +22,6 @@ const AuthForm = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [nome, setNome] = useState("");
   const [cognome, setCognome] = useState("");
-  const [role, setRole] = useState<"user" | "admin">("user");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +53,7 @@ const AuthForm = () => {
         data: {
           nome,
           cognome,
-          role,
+          role: 'user', // Default role for all new users
         },
       },
     });
@@ -166,17 +164,11 @@ const AuthForm = () => {
                       required
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="role">Tipo di account</Label>
-                    <Select value={role} onValueChange={(value: "user" | "admin") => setRole(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona il tipo di account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Utente (solo visualizzazione)</SelectItem>
-                        <SelectItem value="admin">Amministratore (modifica completa)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <p className="text-sm text-blue-600">
+                      <strong>Nota:</strong> Tutti i nuovi account vengono creati come utenti normali. 
+                      Per ottenere privilegi di amministratore, contatta un amministratore del sistema.
+                    </p>
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Registrazione in corso..." : "Registrati"}
