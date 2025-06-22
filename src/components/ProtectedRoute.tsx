@@ -1,6 +1,5 @@
 
 import { useAuth } from '@/hooks/useAuth';
-import AuthForm from './AuthForm';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
-  const { user, profile, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -21,22 +20,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     );
   }
 
-  if (!user || !profile) {
-    return <AuthForm />;
-  }
-
-  if (requireAdmin && profile.role !== 'admin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Accesso Negato</h2>
-          <p className="text-gray-600">Non hai i permessi necessari per accedere a questa sezione.</p>
-          <p className="text-sm text-gray-500 mt-2">Solo gli amministratori possono accedere a questa funzionalità.</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Skip authentication checks and show content directly
   return <>{children}</>;
 };
 
