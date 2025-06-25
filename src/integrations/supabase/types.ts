@@ -9,6 +9,68 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      exams: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          nome: string
+          tipo: string
+          use_letter_grades: boolean
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          id?: string
+          nome: string
+          tipo: string
+          use_letter_grades?: boolean
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          use_letter_grades?: boolean
+        }
+        Relationships: []
+      }
+      grades: {
+        Row: {
+          created_at: string
+          exam_id: string
+          id: string
+          matricola: string
+          voto_lettera: string | null
+          voto_numerico: number | null
+        }
+        Insert: {
+          created_at?: string
+          exam_id: string
+          id?: string
+          matricola: string
+          voto_lettera?: string | null
+          voto_numerico?: number | null
+        }
+        Update: {
+          created_at?: string
+          exam_id?: string
+          id?: string
+          matricola?: string
+          voto_lettera?: string | null
+          voto_numerico?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grades_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           cognome: string
@@ -30,6 +92,30 @@ export type Database = {
           id?: string
           nome?: string
           role?: string
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          cognome: string
+          created_at: string
+          id: string
+          matricola: string
+          nome: string
+        }
+        Insert: {
+          cognome: string
+          created_at?: string
+          id?: string
+          matricola: string
+          nome: string
+        }
+        Update: {
+          cognome?: string
+          created_at?: string
+          id?: string
+          matricola?: string
+          nome?: string
         }
         Relationships: []
       }

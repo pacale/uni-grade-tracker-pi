@@ -12,7 +12,7 @@ import {
   getStudents,
   addGrade,
   addExam
-} from "@/utils/dataStorage";
+} from "@/utils/supabaseDataService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [showNewExamDialog, setShowNewExamDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -95,9 +96,24 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
   const watchExamId = watch('examId');
   
   useEffect(() => {
-    // Load data
-    setStudents(getStudents());
-    setExams(getExams());
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [studentsData, examsData] = await Promise.all([
+          getStudents(),
+          getExams()
+        ]);
+        setStudents(studentsData);
+        setExams(examsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast.error("Errore nel caricamento dei dati");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
   
   // Update selected exam when examId changes
@@ -149,17 +165,17 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
       }
       
       // Save the grade
-      addGrade(gradeData as Omit<Grade, "id">);
+      await addGrade(gradeData as Omit<Grade, "id">);
       toast.success("Voto salvato con successo");
       onComplete();
     } catch (error) {
+      console.error('Error saving grade:', error);
       toast.error(error instanceof Error ? error.message : "Errore durante il salvataggio");
     }
   };
 
   const handleAddExam = async (formData: NewExamFormData) => {
     try {
-      // Fix: Ensure all required fields are present
       const newExamData: Omit<Exam, "id"> = {
         nome: formData.nome,
         tipo: formData.tipo,
@@ -167,15 +183,26 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
         useLetterGrades: formData.useLetterGrades
       };
       
-      const newExam = addExam(newExamData);
+      const newExam = await addExam(newExamData);
       setExams(prev => [...prev, newExam]);
       setValue("examId", newExam.id);
       setShowNewExamDialog(false);
       toast.success("Esame creato con successo");
     } catch (error) {
+      console.error('Error creating exam:', error);
       toast.error(error instanceof Error ? error.message : "Errore durante la creazione dell'esame");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <>

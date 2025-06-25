@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -10,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getExams } from "@/utils/dataStorage";
+import { getExams } from "@/utils/supabaseDataService";
 import { Exam, StudentWithGrades } from "@/types";
 import { formatGrade } from "@/utils/gradeUtils";
 import {
@@ -31,9 +32,9 @@ const Dashboard = () => {
   const [rankingType, setRankingType] = useState<'exam' | 'all'>('all');
 
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       try {
-        const availableExams = getExams();
+        const availableExams = await getExams();
         setExams(availableExams);
         
         // Set first exam as default if none selected and exams are available

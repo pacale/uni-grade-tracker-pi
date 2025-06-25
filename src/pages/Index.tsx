@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { initializeSampleData } from "@/utils/dataStorage";
+import { initializeSampleData } from "@/utils/supabaseDataService";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Dashboard from "@/components/Dashboard";
@@ -14,10 +14,19 @@ import ExamStats from "@/components/ExamStats";
 const Index = () => {
   const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Initialize sample data if needed
   useEffect(() => {
-    initializeSampleData();
+    const initData = async () => {
+      try {
+        await initializeSampleData();
+      } catch (error) {
+        console.error('Error initializing sample data:', error);
+      }
+    };
+    
+    initData();
   }, []);
 
   const handleStudentEdit = (student: any) => {
@@ -30,6 +39,8 @@ const Index = () => {
 
   const handleFormComplete = () => {
     console.log('Form completed');
+    // Trigger refresh for components that need it
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
@@ -64,7 +75,11 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="students" className="m-0">
-                <StudentTable onEdit={handleStudentEdit} onView={handleStudentView} />
+                <StudentTable 
+                  onEdit={handleStudentEdit} 
+                  onView={handleStudentView}
+                  refreshTrigger={refreshTrigger}
+                />
               </TabsContent>
 
               <TabsContent value="courses" className="m-0">

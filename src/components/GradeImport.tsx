@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Exam, Student } from "@/types";
+import { Exam } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getExams, importGradesFromCSV } from "@/utils/dataStorage";
+import { getExams, importGradesFromCSV } from "@/utils/supabaseDataService";
 import {
   Select,
   SelectContent,
@@ -26,10 +26,23 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [hasHeaderRow, setHasHeaderRow] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load exams
-    setExams(getExams());
+    const loadExams = async () => {
+      try {
+        setLoading(true);
+        const examsData = await getExams();
+        setExams(examsData);
+      } catch (error) {
+        console.error('Error loading exams:', error);
+        toast.error("Errore nel caricamento degli esami");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExams();
   }, []);
   
   // Update selected exam when examId changes
@@ -67,7 +80,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       }
       
       // Import grades
-      const result = importGradesFromCSV({
+      const result = await importGradesFromCSV({
         csvData,
         examId: selectedExam.id,
         examType: selectedExam.tipo,
@@ -86,11 +99,22 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
         onComplete();
       }
     } catch (error) {
+      console.error('Error importing grades:', error);
       toast.error(error instanceof Error ? error.message : "Errore durante l'importazione");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

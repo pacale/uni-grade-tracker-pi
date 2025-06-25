@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Student } from "@/types";
-import { getStudents, deleteStudent } from "@/utils/dataStorage";
+import { getStudents, deleteStudent } from "@/utils/supabaseDataService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,16 +33,29 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadStudents = () => {
-      const allStudents = getStudents();
-      setStudents(allStudents);
-      applySearch(allStudents, search);
+    const loadStudents = async () => {
+      try {
+        setLoading(true);
+        const allStudents = await getStudents();
+        setStudents(allStudents);
+        applySearch(allStudents, search);
+      } catch (error) {
+        console.error('Error loading students:', error);
+        toast.error("Errore nel caricamento degli studenti");
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadStudents();
-  }, [refreshTrigger, search]);
+  }, [refreshTrigger]);
+
+  useEffect(() => {
+    applySearch(students, search);
+  }, [students, search]);
 
   const applySearch = (students: Student[], term: string) => {
     if (!term.trim()) {
@@ -62,31 +75,40 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearch = e.target.value;
-    setSearch(newSearch);
-    applySearch(students, newSearch);
+    setSearch(e.target.value);
   };
 
   const handleDelete = (id: string) => {
     setConfirmDelete(id);
   };
 
-  const confirmDeleteStudent = () => {
+  const confirmDeleteStudent = async () => {
     if (confirmDelete) {
       try {
-        deleteStudent(confirmDelete);
+        await deleteStudent(confirmDelete);
         toast.success("Studente eliminato con successo");
         
-        // Update the student list
-        const updatedStudents = students.filter(s => s.id !== confirmDelete);
+        // Reload students
+        const updatedStudents = await getStudents();
         setStudents(updatedStudents);
         applySearch(updatedStudents, search);
       } catch (error) {
+        console.error('Error deleting student:', error);
         toast.error("Errore durante l'eliminazione dello studente");
       }
       setConfirmDelete(null);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Caricamento studenti...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
