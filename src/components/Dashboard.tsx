@@ -44,12 +44,12 @@ const Dashboard = () => {
         
         // Only load dashboard data if an exam is selected
         if (selectedExamId) {
-          const data = getDashboardAnalytics(selectedExamId);
+          const data = await getDashboardAnalytics(selectedExamId);
           setAnalytics(data);
         }
         
         // Load student ranking
-        loadStudentRanking();
+        await loadStudentRanking();
       } catch (error) {
         console.error("Error loading analytics:", error);
       } finally {
@@ -61,12 +61,12 @@ const Dashboard = () => {
   }, [selectedExamId]);
 
   // Separate function to load student ranking based on current rankingType
-  const loadStudentRanking = () => {
+  const loadStudentRanking = async () => {
     try {
       // Either filter by exam or get all students
       const ranking = rankingType === 'exam' && selectedExamId 
-        ? getStudentRanking(selectedExamId) 
-        : getStudentRanking();
+        ? await getStudentRanking(selectedExamId) 
+        : await getStudentRanking();
       
       setStudentRanking(ranking);
     } catch (error) {

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Dashboard from "@/components/Dashboard";
 import StudentTable from "@/components/StudentTable";
+import StudentImport from "@/components/StudentImport";
 import CourseForm from "@/components/CourseForm";
 import GradeEntry from "@/components/GradeEntry";
 import GradeImport from "@/components/GradeImport";
@@ -50,7 +51,7 @@ const Index = () => {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 mb-6">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 mb-6">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="students">
                 Studenti
@@ -62,7 +63,10 @@ const Index = () => {
                 Voti
               </TabsTrigger>
               <TabsTrigger value="import">
-                Importa
+                Importa Voti
+              </TabsTrigger>
+              <TabsTrigger value="student-import">
+                Importa Studenti
               </TabsTrigger>
               <TabsTrigger value="stats">
                 Statistiche
@@ -92,6 +96,10 @@ const Index = () => {
 
               <TabsContent value="import" className="m-0">
                 <GradeImport onComplete={handleFormComplete} />
+              </TabsContent>
+
+              <TabsContent value="student-import" className="m-0">
+                <StudentImport onComplete={handleFormComplete} />
               </TabsContent>
 
               <TabsContent value="stats" className="m-0">
