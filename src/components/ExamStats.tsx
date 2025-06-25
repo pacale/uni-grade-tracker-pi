@@ -21,10 +21,10 @@ const ExamStats = ({ selectedExamId }: ExamStatsProps) => {
   const [examRanking, setExamRanking] = useState<ExamWithStats[]>([]);
 
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       try {
         // Load exam ranking
-        const examRank = getExamRanking();
+        const examRank = await getExamRanking();
         setExamRanking(examRank);
         console.log("Exam ranking loaded:", examRank);
       } catch (error) {
