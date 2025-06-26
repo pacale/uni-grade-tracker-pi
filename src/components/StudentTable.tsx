@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Student } from "@/types";
 import { getStudents, deleteStudent } from "@/utils/dataService";
@@ -20,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import StudentGradeDetails from "./StudentGradeDetails";
 
 interface StudentTableProps {
   onEdit: (student: Student) => void;
@@ -32,6 +34,8 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showGradeDetails, setShowGradeDetails] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,6 +103,16 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
     }
   };
 
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setShowGradeDetails(true);
+  };
+
+  const handleCloseGradeDetails = () => {
+    setShowGradeDetails(false);
+    setSelectedStudent(null);
+  };
+
   if (loading) {
     return (
       <div className="flex h-[400px] w-full items-center justify-center">
@@ -150,9 +164,9 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onView(student.matricola)}
+                      onClick={() => handleViewStudent(student)}
                     >
-                      Visualizza
+                      Visualizza Voti
                     </Button>
                     <Button
                       variant="outline"
@@ -194,6 +208,12 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StudentGradeDetails
+        student={selectedStudent}
+        isOpen={showGradeDetails}
+        onClose={handleCloseGradeDetails}
+      />
     </div>
   );
 };
