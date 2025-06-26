@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Exam, 
@@ -12,7 +11,7 @@ import {
   getStudents,
   addGrade,
   addExam
-} from "@/utils/supabaseDataService";
+} from "@/utils/dataService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,13 +95,11 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
   const watchExamId = watch('examId');
   
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = () => {
       try {
         setLoading(true);
-        const [studentsData, examsData] = await Promise.all([
-          getStudents(),
-          getExams()
-        ]);
+        const studentsData = getStudents();
+        const examsData = getExams();
         setStudents(studentsData);
         setExams(examsData);
       } catch (error) {
@@ -126,7 +123,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
     }
   }, [watchExamId, exams]);
   
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = (data: FormData) => {
     try {
       // Find the selected student
       const student = students.find(s => s.id === data.studentId);
@@ -165,7 +162,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
       }
       
       // Save the grade
-      await addGrade(gradeData as Omit<Grade, "id">);
+      addGrade(gradeData as Omit<Grade, "id">);
       toast.success("Voto salvato con successo");
       onComplete();
     } catch (error) {
@@ -174,7 +171,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
     }
   };
 
-  const handleAddExam = async (formData: NewExamFormData) => {
+  const handleAddExam = (formData: NewExamFormData) => {
     try {
       const newExamData: Omit<Exam, "id"> = {
         nome: formData.nome,
@@ -183,7 +180,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
         useLetterGrades: formData.useLetterGrades
       };
       
-      const newExam = await addExam(newExamData);
+      const newExam = addExam(newExamData);
       setExams(prev => [...prev, newExam]);
       setValue("examId", newExam.id);
       setShowNewExamDialog(false);

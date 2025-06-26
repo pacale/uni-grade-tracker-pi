@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { Student } from "@/types";
-import { getStudents, deleteStudent } from "@/utils/supabaseDataService";
+import { getStudents, deleteStudent } from "@/utils/dataService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,10 +35,10 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadStudents = async () => {
+    const loadStudents = () => {
       try {
         setLoading(true);
-        const allStudents = await getStudents();
+        const allStudents = getStudents();
         setStudents(allStudents);
         applySearch(allStudents, search);
       } catch (error) {
@@ -82,14 +81,14 @@ const StudentTable = ({ onEdit, onView, refreshTrigger = 0 }: StudentTableProps)
     setConfirmDelete(id);
   };
 
-  const confirmDeleteStudent = async () => {
+  const confirmDeleteStudent = () => {
     if (confirmDelete) {
       try {
-        await deleteStudent(confirmDelete);
+        deleteStudent(confirmDelete);
         toast.success("Studente eliminato con successo");
         
         // Reload students
-        const updatedStudents = await getStudents();
+        const updatedStudents = getStudents();
         setStudents(updatedStudents);
         applySearch(updatedStudents, search);
       } catch (error) {

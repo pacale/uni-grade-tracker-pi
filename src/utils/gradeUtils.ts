@@ -1,6 +1,5 @@
-
 import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades, ExamWithStats } from "@/types";
-import { getExams, getGrades, getStudents } from "./supabaseDataService";
+import { getExams, getGrades, getStudents } from "./dataService";
 
 // Convert letter grade to numeric equivalent for calculations
 export const letterToNumeric = (letter: LetterGrade): number => {
@@ -106,8 +105,8 @@ export const calculateStats = (grades: Grade[]): GradeStats => {
 };
 
 // Calculate statistics for an exam
-export const getExamStats = async (examId: string): Promise<GradeStats & { gradeCount: number }> => {
-  const examGrades = (await getGrades()).filter(g => g.examId === examId);
+export const getExamStats = (examId: string): GradeStats & { gradeCount: number } => {
+  const examGrades = getGrades().filter(g => g.examId === examId);
   return {
     ...calculateStats(examGrades),
     gradeCount: examGrades.length
@@ -115,9 +114,9 @@ export const getExamStats = async (examId: string): Promise<GradeStats & { grade
 };
 
 // Get all grades for a student
-export const getStudentGrades = async (matricola: string) => {
-  const grades = (await getGrades()).filter(g => g.matricola === matricola);
-  const exams = await getExams();
+export const getStudentGrades = (matricola: string) => {
+  const grades = getGrades().filter(g => g.matricola === matricola);
+  const exams = getExams();
   
   return grades.map(grade => {
     const exam = exams.find(e => e.id === grade.examId);
@@ -132,8 +131,8 @@ export const getStudentGrades = async (matricola: string) => {
 };
 
 // Calculate average grade for a student
-export const getStudentAverage = async (matricola: string): Promise<number> => {
-  const grades = (await getGrades()).filter(g => g.matricola === matricola);
+export const getStudentAverage = (matricola: string): number => {
+  const grades = getGrades().filter(g => g.matricola === matricola);
   
   if (grades.length === 0) {
     return 0;
@@ -159,8 +158,8 @@ export const getStudentAverage = async (matricola: string): Promise<number> => {
 };
 
 // Get unique matricole with grades, regardless of being registered
-export const getUniqueMatricoleWithGrades = async (): Promise<string[]> => {
-  const grades = await getGrades();
+export const getUniqueMatricoleWithGrades = (): string[] => {
+  const grades = getGrades();
   const uniqueMatricole = new Set<string>();
   
   grades.forEach(grade => {
@@ -171,11 +170,11 @@ export const getUniqueMatricoleWithGrades = async (): Promise<string[]> => {
 };
 
 // Get student ranking based on average grades
-export const getStudentRanking = async (examId?: string): Promise<StudentWithGrades[]> => {
-  const matricole = await getUniqueMatricoleWithGrades();
-  const students = await getStudents();
-  const exams = await getExams();
-  const grades = await getGrades();
+export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
+  const matricole = getUniqueMatricoleWithGrades();
+  const students = getStudents();
+  const exams = getExams();
+  const grades = getGrades();
   
   const studentsWithGrades: StudentWithGrades[] = [];
   
@@ -266,9 +265,9 @@ export const getStudentRanking = async (examId?: string): Promise<StudentWithGra
 };
 
 // Get exam ranking based on average grades
-export const getExamRanking = async (): Promise<ExamWithStats[]> => {
-  const exams = await getExams();
-  const grades = await getGrades();
+export const getExamRanking = (): ExamWithStats[] => {
+  const exams = getExams();
+  const grades = getGrades();
   
   const examsWithStats: ExamWithStats[] = [];
   
@@ -298,10 +297,10 @@ export const getExamRanking = async (): Promise<ExamWithStats[]> => {
 };
 
 // Get analytics data for dashboard
-export const getDashboardAnalytics = async (examId?: string) => {
-  const students = await getStudents();
-  const exams = await getExams();
-  const grades = await getGrades();
+export const getDashboardAnalytics = (examId?: string) => {
+  const students = getStudents();
+  const exams = getExams();
+  const grades = getGrades();
   
   // Filter grades by exam if specified
   const filteredGrades = examId ? 
@@ -329,6 +328,6 @@ export const getDashboardAnalytics = async (examId?: string) => {
 };
 
 // Get global student ranking across all exams
-export const getGlobalStudentRanking = async (): Promise<StudentWithGrades[]> => {
+export const getGlobalStudentRanking = (): StudentWithGrades[] => {
   return getStudentRanking();
 };

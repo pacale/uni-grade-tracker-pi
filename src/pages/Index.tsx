@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { initializeSampleData } from "@/utils/supabaseDataService";
+import { initializeSampleData } from "@/utils/dataService";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import Dashboard from "@/components/Dashboard";
@@ -19,9 +18,9 @@ const Index = () => {
 
   // Initialize sample data if needed
   useEffect(() => {
-    const initData = async () => {
+    const initData = () => {
       try {
-        await initializeSampleData();
+        initializeSampleData();
       } catch (error) {
         console.error('Error initializing sample data:', error);
       }

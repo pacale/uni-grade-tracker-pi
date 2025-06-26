@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Exam } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getExams, importGradesFromCSV } from "@/utils/supabaseDataService";
+import { getExams, importGradesFromCSV } from "@/utils/dataService";
 import {
   Select,
   SelectContent,
@@ -29,10 +28,10 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadExams = async () => {
+    const loadExams = () => {
       try {
         setLoading(true);
-        const examsData = await getExams();
+        const examsData = getExams();
         setExams(examsData);
       } catch (error) {
         console.error('Error loading exams:', error);
@@ -55,7 +54,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
     }
   }, [examId, exams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -80,7 +79,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       }
       
       // Import grades
-      const result = await importGradesFromCSV({
+      const result = importGradesFromCSV({
         csvData,
         examId: selectedExam.id,
         examType: selectedExam.tipo,

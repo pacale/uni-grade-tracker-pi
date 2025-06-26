@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { importStudentsFromCSV } from "@/utils/supabaseDataService";
+import { importStudentsFromCSV } from "@/utils/dataService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, FileText } from "lucide-react";
 
@@ -16,7 +15,7 @@ const StudentImport = ({ onComplete }: StudentImportProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasHeaderRow, setHasHeaderRow] = useState(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -27,7 +26,7 @@ const StudentImport = ({ onComplete }: StudentImportProps) => {
         return;
       }
       
-      const importedStudents = await importStudentsFromCSV(csvData);
+      const importedStudents = importStudentsFromCSV(csvData);
       
       if (importedStudents.length === 0) {
         toast.info("Nessuno studente importato. Verifica il formato del file CSV.");
