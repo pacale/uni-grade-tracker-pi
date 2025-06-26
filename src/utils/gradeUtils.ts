@@ -1,3 +1,4 @@
+
 import { Exam, Grade, GradeStats, LetterGrade, Student, StudentWithGrades, ExamWithStats } from "@/types";
 import { getExams, getGrades, getStudents } from "./dataService";
 
@@ -176,6 +177,11 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
   const exams = getExams();
   const grades = getGrades();
   
+  // If no grades exist at all, return empty array
+  if (grades.length === 0) {
+    return [];
+  }
+  
   const studentsWithGrades: StudentWithGrades[] = [];
   
   // Process each matricola (including those not in registered students)
@@ -189,7 +195,7 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
       : grades.filter(g => g.matricola === matricola);
     
     // Skip if no grades for this student (when filtered by examId)
-    if (examId && studentGrades.length === 0) {
+    if (studentGrades.length === 0) {
       return;
     }
     
@@ -203,6 +209,11 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
         exam
       };
     }).filter(Boolean) as (Grade & { exam: Exam })[];
+    
+    // Only include students who have at least one grade
+    if (gradesWithExams.length === 0) {
+      return;
+    }
     
     // Create StudentWithGrades object
     const studentWithGrades: StudentWithGrades = {
@@ -261,6 +272,8 @@ export const getStudentRanking = (examId?: string): StudentWithGrades[] => {
         };
       }
     })
+    // Only include students with valid averages (> 0) in the ranking
+    .filter(student => student.average > 0)
     .sort((a, b) => (b.average || 0) - (a.average || 0)); // Sort by average (highest first)
 };
 

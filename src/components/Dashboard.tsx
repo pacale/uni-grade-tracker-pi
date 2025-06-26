@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -298,7 +297,7 @@ const Dashboard = () => {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          Nessun dato disponibile
+                          Nessuno studente ha ancora ricevuto voti sufficienti per una classifica
                         </TableCell>
                       </TableRow>
                     )}
@@ -332,7 +331,7 @@ const Dashboard = () => {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          Nessun dato disponibile per questo esame
+                          Nessun voto disponibile per questo esame
                         </TableCell>
                       </TableRow>
                     )}
