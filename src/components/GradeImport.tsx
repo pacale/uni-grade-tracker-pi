@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Exam } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getExams, importGradesFromCSV } from "@/utils/dataService";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
@@ -28,11 +29,33 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadExams = () => {
+    const loadExams = async () => {
       try {
         setLoading(true);
-        const examsData = getExams();
-        setExams(examsData);
+        console.log('Loading exams from Supabase...');
+        
+        const { data: examsData, error } = await supabase
+          .from('exams')
+          .select('*')
+          .order('data', { ascending: false });
+
+        if (error) {
+          console.error('Error loading exams:', error);
+          toast.error("Errore nel caricamento degli esami");
+          return;
+        }
+
+        // Convert Supabase data to our Exam type
+        const formattedExams: Exam[] = (examsData || []).map(exam => ({
+          id: exam.id,
+          nome: exam.nome,
+          tipo: exam.tipo as 'intermedio' | 'completo',
+          data: exam.data,
+          useLetterGrades: exam.use_letter_grades
+        }));
+
+        console.log('Loaded exams:', formattedExams);
+        setExams(formattedExams);
       } catch (error) {
         console.error('Error loading exams:', error);
         toast.error("Errore nel caricamento degli esami");
@@ -54,7 +77,98 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
     }
   }, [examId, exams]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const importGradesFromCSV = async (csvData: string, examId: string, hasHeaderRow: boolean) => {
+    const rows = csvData.split('\n').filter(row => row.trim());
+    
+    if (rows.length === 0) {
+      return { imported: 0, errors: 0 };
+    }
+    
+    // Skip header row if indicated
+    const startIndex = hasHeaderRow ? 1 : 0;
+    
+    // Get the exam
+    const exam = exams.find(e => e.id === examId);
+    
+    if (!exam) {
+      throw new Error("Esame non trovato");
+    }
+    
+    // Process each row
+    let imported = 0;
+    let errors = 0;
+    
+    for (let i = startIndex; i < rows.length; i++) {
+      const columns = rows[i].split(',').map(col => col.trim());
+      
+      try {
+        if (columns.length < 2) {
+          errors++;
+          console.error(`Riga ${i+1}: formato non valido (numero colonne insufficiente)`);
+          continue;
+        }
+        
+        const matricola = columns[0];
+        
+        if (exam.useLetterGrades) {
+          // For letter grades
+          const votoLettera = columns[1].toUpperCase();
+          
+          if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(votoLettera)) {
+            errors++;
+            console.error(`Riga ${i+1}: voto in lettere non valido (${votoLettera}) per lo studente ${matricola}`);
+            continue;
+          }
+          
+          const { error } = await supabase
+            .from('grades')
+            .insert({
+              matricola,
+              exam_id: exam.id,
+              voto_lettera: votoLettera
+            });
+            
+          if (error) {
+            errors++;
+            console.error(`Errore nell'inserimento del voto per ${matricola}:`, error);
+            continue;
+          }
+        } else {
+          // For numeric grades
+          const votoNumerico = parseInt(columns[1]);
+          
+          if (isNaN(votoNumerico) || votoNumerico < 0 || votoNumerico > 30) {
+            errors++;
+            console.error(`Riga ${i+1}: voto numerico non valido (${columns[1]}) per lo studente ${matricola}`);
+            continue;
+          }
+          
+          const { error } = await supabase
+            .from('grades')
+            .insert({
+              matricola,
+              exam_id: exam.id,
+              voto_numerico: votoNumerico
+            });
+            
+          if (error) {
+            errors++;
+            console.error(`Errore nell'inserimento del voto per ${matricola}:`, error);
+            continue;
+          }
+        }
+        
+        imported++;
+      } catch (error) {
+        errors++;
+        console.error(`Errore nell'importazione della riga ${i+1}:`, error);
+      }
+    }
+    
+    return { imported, errors };
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -79,12 +193,7 @@ const GradeImport = ({ onComplete }: GradeImportProps) => {
       }
       
       // Import grades
-      const result = importGradesFromCSV({
-        csvData,
-        examId: selectedExam.id,
-        examType: selectedExam.tipo,
-        hasHeaderRow
-      });
+      const result = await importGradesFromCSV(csvData, selectedExam.id, hasHeaderRow);
       
       if (result.imported === 0) {
         toast.info("Nessun voto importato. Verifica il formato del file CSV e assicurati che le matricole esistano.");
