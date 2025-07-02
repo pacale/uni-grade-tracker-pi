@@ -1,10 +1,11 @@
 
-import { Student, Exam, Grade, ExamType, LetterGrade } from "@/types";
+import { Student, Exam, Grade, ExamType, LetterGrade, Course } from "@/types";
 
 // Local storage keys
 const STUDENTS_KEY = "sgvu_students";
 const EXAMS_KEY = "sgvu_exams";
 const GRADES_KEY = "sgvu_grades";
+const COURSES_KEY = "sgvu_courses";
 
 // Helper to generate IDs
 export const generateId = (): string => {
@@ -37,6 +38,15 @@ export const getGrades = (): Grade[] => {
 
 export const setGrades = (grades: Grade[]): void => {
   localStorage.setItem(GRADES_KEY, JSON.stringify(grades));
+};
+
+export const getCourses = (): Course[] => {
+  const data = localStorage.getItem(COURSES_KEY);
+  return data ? JSON.parse(data) : [];
+};
+
+export const setCourses = (courses: Course[]): void => {
+  localStorage.setItem(COURSES_KEY, JSON.stringify(courses));
 };
 
 // CRUD Operations
@@ -86,9 +96,13 @@ export const deleteStudent = (id: string): void => {
 
 // Exams
 export const addExam = (exam: Omit<Exam, "id">): Exam => {
+  console.log('Adding exam:', exam);
   const newExam = { ...exam, id: generateId() };
   const exams = getExams();
-  setExams([...exams, newExam]);
+  const updatedExams = [...exams, newExam];
+  setExams(updatedExams);
+  console.log('Exam added successfully:', newExam);
+  console.log('Updated exams list:', updatedExams);
   return newExam;
 };
 
@@ -112,6 +126,36 @@ export const deleteExam = (id: string): void => {
   // Also delete related grades
   const grades = getGrades();
   setGrades(grades.filter(g => g.examId !== id));
+};
+
+// Clear all exams
+export const clearAllExams = (): void => {
+  console.log('Clearing all exams...');
+  setExams([]);
+  // Also clear all grades since they depend on exams
+  setGrades([]);
+  console.log('All exams and grades cleared');
+};
+
+// Courses
+export const addCourse = (course: Omit<Course, "id">): Course => {
+  const newCourse = { ...course, id: generateId() };
+  const courses = getCourses();
+  setCourses([...courses, newCourse]);
+  return newCourse;
+};
+
+export const updateCourse = (course: Course): Course => {
+  const courses = getCourses();
+  const index = courses.findIndex(c => c.id === course.id);
+  
+  if (index === -1) {
+    throw new Error("Course not found");
+  }
+  
+  courses[index] = course;
+  setCourses(courses);
+  return course;
 };
 
 // Grades
@@ -351,9 +395,12 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
   return { imported, errors };
 };
 
-// Initialize with sample data if empty
+// Initialize with sample data if empty (without creating sample exams)
 export const initializeSampleData = () => {
-  if (getStudents().length === 0 && getExams().length === 0) {
+  // Clear all exams first
+  clearAllExams();
+  
+  if (getStudents().length === 0) {
     // Sample students
     const students = [
       { matricola: "0612710901", nome: "Marco", cognome: "Rossi" },
@@ -364,61 +411,5 @@ export const initializeSampleData = () => {
     students.forEach(student => {
       try { addStudent(student); } catch(e) { /* ignore */ }
     });
-    
-    // Sample exams
-    const exams = [
-      { nome: "Programmazione - Prova finale", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: true },
-      { nome: "Matematica Discreta - Primo appello", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: true },
-      { nome: "Fisica - Computo finale", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: false },
-    ];
-    
-    const createdExams: Exam[] = [];
-    exams.forEach(exam => {
-      try { 
-        const newExam = addExam(exam);
-        createdExams.push(newExam);
-      } catch(e) { /* ignore */ }
-    });
-    
-    if (createdExams.length > 0) {
-      // Add sample grades
-      createdExams.forEach(exam => {
-        // Add some grades for each exam
-        students.forEach((student, index) => {
-          try {
-            if (exam.useLetterGrades) {
-              // Letter grades
-              const letterGrades: LetterGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
-              addGrade({
-                matricola: student.matricola,
-                examId: exam.id,
-                votoLettera: letterGrades[index % letterGrades.length]
-              });
-            } else {
-              // Numeric grades
-              const baseGrade = 18 + (index * 3);
-              const grade = Math.min(baseGrade, 30);
-              
-              addGrade({
-                matricola: student.matricola,
-                examId: exam.id,
-                votoNumerico: grade
-              });
-            }
-          } catch(e) { /* ignore */ }
-        });
-      });
-    }
   }
-};
-
-// Add stubs for CourseForm.tsx
-export const addCourse = (course: any) => {
-  console.warn("addCourse is not implemented");
-  return null;
-};
-
-export const updateCourse = (course: any) => {
-  console.warn("updateCourse is not implemented");
-  return null;
 };

@@ -1,9 +1,10 @@
-import { Student, Exam, Grade, ExamType, LetterGrade } from "@/types";
+import { Student, Exam, Grade, ExamType, LetterGrade, Course } from "@/types";
 
 // Local storage keys
 const STUDENTS_KEY = "sgvu_students";
 const EXAMS_KEY = "sgvu_exams";
 const GRADES_KEY = "sgvu_grades";
+const COURSES_KEY = "sgvu_courses";
 
 // Helper to generate IDs
 export const generateId = (): string => {
@@ -36,6 +37,15 @@ export const getGrades = (): Grade[] => {
 
 export const setGrades = (grades: Grade[]): void => {
   localStorage.setItem(GRADES_KEY, JSON.stringify(grades));
+};
+
+export const getCourses = (): Course[] => {
+  const data = localStorage.getItem(COURSES_KEY);
+  return data ? JSON.parse(data) : [];
+};
+
+export const setCourses = (courses: Course[]): void => {
+  localStorage.setItem(COURSES_KEY, JSON.stringify(courses));
 };
 
 // CRUD Operations
@@ -85,9 +95,13 @@ export const deleteStudent = (id: string): void => {
 
 // Exams
 export const addExam = (exam: Omit<Exam, "id">): Exam => {
+  console.log('Adding exam:', exam);
   const newExam = { ...exam, id: generateId() };
   const exams = getExams();
-  setExams([...exams, newExam]);
+  const updatedExams = [...exams, newExam];
+  setExams(updatedExams);
+  console.log('Exam added successfully:', newExam);
+  console.log('Updated exams list:', updatedExams);
   return newExam;
 };
 
@@ -111,6 +125,36 @@ export const deleteExam = (id: string): void => {
   // Also delete related grades
   const grades = getGrades();
   setGrades(grades.filter(g => g.examId !== id));
+};
+
+// Clear all exams
+export const clearAllExams = (): void => {
+  console.log('Clearing all exams...');
+  setExams([]);
+  // Also clear all grades since they depend on exams
+  setGrades([]);
+  console.log('All exams and grades cleared');
+};
+
+// Courses
+export const addCourse = (course: Omit<Course, "id">): Course => {
+  const newCourse = { ...course, id: generateId() };
+  const courses = getCourses();
+  setCourses([...courses, newCourse]);
+  return newCourse;
+};
+
+export const updateCourse = (course: Course): Course => {
+  const courses = getCourses();
+  const index = courses.findIndex(c => c.id === course.id);
+  
+  if (index === -1) {
+    throw new Error("Course not found");
+  }
+  
+  courses[index] = course;
+  setCourses(courses);
+  return course;
 };
 
 // Grades
