@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { initializeSampleData } from "@/utils/dataService";
@@ -89,7 +88,7 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="grades" className="m-0">
-                <GradeEntry onComplete={handleFormComplete} />
+                <GradeEntry onComplete={handleFormComplete} enableExamCreation={true} />
               </TabsContent>
 
               <TabsContent value="import" className="m-0">

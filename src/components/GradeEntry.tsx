@@ -102,6 +102,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
         const examsData = getExams();
         setStudents(studentsData);
         setExams(examsData);
+        console.log('Loaded exams:', examsData);
       } catch (error) {
         console.error('Error loading data:', error);
         toast.error("Errore nel caricamento dei dati");
@@ -173,6 +174,8 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
 
   const handleAddExam = (formData: NewExamFormData) => {
     try {
+      console.log('Creating exam with data:', formData);
+      
       const newExamData: Omit<Exam, "id"> = {
         nome: formData.nome,
         tipo: formData.tipo,
@@ -180,10 +183,29 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
         useLetterGrades: formData.useLetterGrades
       };
       
+      console.log('New exam data:', newExamData);
+      
       const newExam = addExam(newExamData);
-      setExams(prev => [...prev, newExam]);
+      console.log('Created exam:', newExam);
+      
+      // Update the exams list
+      const updatedExams = [...exams, newExam];
+      setExams(updatedExams);
+      
+      // Set the new exam as selected
       setValue("examId", newExam.id);
+      
+      // Close the dialog
       setShowNewExamDialog(false);
+      
+      // Reset the form
+      newExamForm.reset({
+        nome: "",
+        data: new Date().toISOString().split('T')[0],
+        tipo: "completo",
+        useLetterGrades: false
+      });
+      
       toast.success("Esame creato con successo");
     } catch (error) {
       console.error('Error creating exam:', error);
@@ -214,7 +236,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
                   <FormLabel>Esame</FormLabel>
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un esame" />
@@ -254,7 +276,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Studente</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleziona uno studente" />
@@ -281,7 +303,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Voto (lettera)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleziona un voto" />
@@ -387,7 +409,7 @@ const GradeEntry = ({ onComplete, enableExamCreation = false }: GradeEntryProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo di esame</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleziona il tipo" />
