@@ -396,7 +396,10 @@ export const importGradesFromCSV = (options: GradeImportOptions): ImportResult =
 
 // Initialize with sample data if empty
 export const initializeSampleData = () => {
-  if (getStudents().length === 0 && getExams().length === 0) {
+  // Clear all exams first
+  clearAllExams();
+  
+  if (getStudents().length === 0) {
     // Sample students
     const students = [
       { matricola: "0612710901", nome: "Marco", cognome: "Rossi" },
@@ -407,61 +410,5 @@ export const initializeSampleData = () => {
     students.forEach(student => {
       try { addStudent(student); } catch(e) { /* ignore */ }
     });
-    
-    // Sample exams
-    const exams = [
-      { nome: "Programmazione - Prova finale", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: true },
-      { nome: "Matematica Discreta - Primo appello", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: true },
-      { nome: "Fisica - Computo finale", tipo: "completo" as ExamType, data: new Date().toISOString().split('T')[0], useLetterGrades: false },
-    ];
-    
-    const createdExams: Exam[] = [];
-    exams.forEach(exam => {
-      try { 
-        const newExam = addExam(exam);
-        createdExams.push(newExam);
-      } catch(e) { /* ignore */ }
-    });
-    
-    if (createdExams.length > 0) {
-      // Add sample grades
-      createdExams.forEach(exam => {
-        // Add some grades for each exam
-        students.forEach((student, index) => {
-          try {
-            if (exam.useLetterGrades) {
-              // Letter grades
-              const letterGrades: LetterGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
-              addGrade({
-                matricola: student.matricola,
-                examId: exam.id,
-                votoLettera: letterGrades[index % letterGrades.length]
-              });
-            } else {
-              // Numeric grades
-              const baseGrade = 18 + (index * 3);
-              const grade = Math.min(baseGrade, 30);
-              
-              addGrade({
-                matricola: student.matricola,
-                examId: exam.id,
-                votoNumerico: grade
-              });
-            }
-          } catch(e) { /* ignore */ }
-        });
-      });
-    }
   }
-};
-
-// Add stubs for CourseForm.tsx
-export const addCourse = (course: any) => {
-  console.warn("addCourse is not implemented");
-  return null;
-};
-
-export const updateCourse = (course: any) => {
-  console.warn("updateCourse is not implemented");
-  return null;
 };

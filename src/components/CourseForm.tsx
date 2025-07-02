@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Course } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { addCourse, updateCourse } from "@/utils/dataStorage";
+import { addCourse, updateCourse } from "@/utils/dataService";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface CourseFormProps {
@@ -35,7 +34,7 @@ const CourseForm = ({ course, onComplete }: CourseFormProps) => {
         updateCourse({
           id: course.id,
           nome,
-          haIntermedio: false, // We're not using this anymore
+          haIntermedio: false, // Fixed to match Course type
           useLetterGrades: votiInLettere
         });
         toast.success("Corso aggiornato con successo");
@@ -43,7 +42,7 @@ const CourseForm = ({ course, onComplete }: CourseFormProps) => {
         // Create
         addCourse({ 
           nome, 
-          haIntermedio: false, // We're not using this anymore
+          haIntermedio: false, // Fixed to match Course type
           useLetterGrades: votiInLettere 
         });
         toast.success("Corso creato con successo");

@@ -44,12 +44,10 @@ export type GradeStats = {
   distribution: Record<string, number>; // key is grade value (A, B, 18, 19, etc.)
 };
 
-// Add this type to fix CourseForm imports
+// Fixed Course type to match CourseForm usage
 export interface Course {
   id: string;
   nome: string;
   useLetterGrades: boolean;
-  // All required fields for CourseForm
-  data: string;
-  tipo: ExamType;
+  haIntermedio: boolean; // Added this property
 }
